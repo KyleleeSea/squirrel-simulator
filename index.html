@@ -898,11 +898,11 @@ function makeChurch(){
     const rs=signPlane('CLIMB THE ROPE',2.4,'#ffe66d','#3a2a1a'); rs.position.set(tx,2.6,TZ+3.9); scene.add(rs);
   }
   // apse at the back and a gilded sign
-  const apse=cyl(8,8,H-2,0xd8d2c4,16); apse.position.set(CX,(H-2)/2,CZ+D/2); scene.add(apse); addStatic(CX,(H-2)/2,CZ+D/2+2,6,(H-2)/2,4);
-  const apseRoof=new THREE.Mesh(new THREE.ConeGeometry(8.5,4,16),mat(0x5b6b7a)); apseRoof.position.set(CX,H,CZ+D/2); scene.add(apseRoof);
+  const apse=cyl(7,7,H-2,0xd8d2c4,16); apse.position.set(CX,(H-2)/2,CZ+D/2+6.6); scene.add(apse); addStatic(CX,(H-2)/2,CZ+D/2+6.6,6,(H-2)/2,6); // the apse sits fully outside the back wall
+  const apseRoof=new THREE.Mesh(new THREE.ConeGeometry(7.5,4,16),mat(0x5b6b7a)); apseRoof.position.set(CX,H,CZ+D/2+6.6); scene.add(apseRoof);
   const sign=signPlane('ST. ACORN\'S CATHEDRAL',10,'#ffe66d','#3a2a1a'); sign.position.set(CX,H-2.5,CZ-D/2-0.3); sign.rotation.y=Math.PI; scene.add(sign);
   const rose=roseWindow(3.2); rose.position.set(CX,H-7,CZ-D/2-0.25); rose.rotation.y=Math.PI; scene.add(rose);
-  footprint(CX-16,CX+16,CZ-D/2-1,CZ+D/2+6);
+  footprint(CX-16,CX+16,CZ-D/2-1,CZ+D/2+14);
 }
 
 // ---------------- the Boshin War, south field ----------------
