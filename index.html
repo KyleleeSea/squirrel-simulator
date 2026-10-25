@@ -122,7 +122,7 @@ h1 span{color:var(--leaf)}
     <div class="card">
       <div>
         <h1>Squirrel <span>Simulator</span></h1>
-        <p class="tag">Be the nuisance this city deserves. Drive cars, break into every building, crash a rave, a wedding, a war and a Kendrick show, dunk on LeBron, get abducted, and fly the plane.</p>
+        <p class="tag">Be the nuisance this city deserves. Drive cars, break into every building, crash a wedding, a war and a Kendrick show, dunk on LeBron, fish the lake, grab a Double-Double, and do not pick a fight with One Punch Man.</p>
       </div>
       <div class="field">
         <label for="nameIn">Your name</label>
@@ -882,8 +882,9 @@ function makeChurch(){
   // bell towers at the front corners, with a rope you can climb to the belfry
   for(const tx of [CX-W/2+1,CX+W/2-1]){
     const TZ=CZ-D/2+2.5, TH=30;
-    for(const [ax,az] of [[1,0],[-1,0],[0,-1]]){ const w=box(ax?0.4:7,TH,az?0.4:7,0xcfc8b8); w.position.set(tx+ax*3.5,TH/2,TZ+az*3.5); scene.add(w); addStatic(tx+ax*3.5,TH/2,TZ+az*3.5,ax?0.2:3.5,TH/2,az?0.2:3.5); }
-    { const w=box(7,TH-20.6,0.4,0xcfc8b8); w.position.set(tx,20.6+(TH-20.6)/2,TZ+3.5); scene.add(w); addStatic(tx,20.6+(TH-20.6)/2,TZ+3.5,3.5,(TH-20.6)/2,0.2); }
+    const WH=TH-4; for(const [ax,az] of [[1,0],[-1,0],[0,-1]]){ const w=box(ax?0.4:7,WH,az?0.4:7,0xcfc8b8); w.position.set(tx+ax*3.5,WH/2,TZ+az*3.5); scene.add(w); addStatic(tx+ax*3.5,WH/2,TZ+az*3.5,ax?0.2:3.5,WH/2,az?0.2:3.5); }
+    { const w=box(7,WH-20.6,0.4,0xcfc8b8); w.position.set(tx,20.6+(WH-20.6)/2,TZ+3.5); scene.add(w); addStatic(tx,20.6+(WH-20.6)/2,TZ+3.5,3.5,(WH-20.6)/2,0.2); }
+    const js=signPlane('OPEN ARCHES · JUMP FOR AIR TIME',3.4,'#ffe66d','#3a2a1a'); js.position.set(tx,TH-1.2,TZ-3.3); scene.add(js);
     const arch=signPlane('BELL TOWER',2.2,'#ffe66d','#3a2a1a'); arch.position.set(tx,3.2,TZ+3.3); scene.add(arch);
     const belfry=box(7.4,0.4,7.4,0xcfc8b8); belfry.position.set(tx,TH-4,TZ); scene.add(belfry); addStatic(tx,TH-4,TZ,3.7,0.2,3.7);
     for(const [ax,az] of [[1,0],[-1,0],[0,1],[0,-1]]){ for(const s of [-1,1]){ const pil=box(ax?0.6:2.2,4,az?0.6:2.2,0xcfc8b8); pil.position.set(tx+ax*3.4+(az?s*2.6:0),TH-2,TZ+az*3.4+(ax?s*2.6:0)); scene.add(pil); } }
@@ -1022,6 +1023,158 @@ makeBuilding({x:12,z:-52,w:10,d:8,h:5,color:0xf2d7a7,floor:0xb08a5a,roof:'pitche
 makePleasanton();
 
 makeWar(); makeConcert(); makeBreakdance();
+
+// ---------------- the cast: Hudson & Matt Wei, Kevin Jiang, One Punch Man, Timmy, Wah, the anglers ----------------
+function makeHudson(){ const g=makeHumanStyled(0xe8c39a,0x111111,0x111111,0x111111); const hood=sphere(0.21,0x111111,12,8); hood.scale.set(1,0.9,1); hood.position.set(0,0.72,-0.04); g.add(hood); const face=sphere(0.17,0xe8c39a,10,8); face.position.set(0,0.68,0.05); g.add(face); const shades=box(0.32,0.08,0.06,0x050505); shades.position.set(0,0.72,0.19); g.add(shades); for(const x of [-1,1]){ const brow=box(0.12,0.03,0.02,0x111); brow.position.set(x*0.07,0.8,0.2); brow.rotation.z=x*0.55; g.add(brow); } const scar=box(0.02,0.1,0.02,0x8a1c2b); scar.position.set(0.1,0.63,0.19); scar.rotation.z=0.3; g.add(scar); nameplate(g,'HUDSON','#ffffff','#111111'); return g; }
+function makeMattWei(){ const g=makeHumanStyled(0xd9a376,0xffffff,0x2f3f7a,0x111111); g.traverse(m=>{ if(!m.isMesh||!m.geometry||!m.geometry.parameters) return; const p=m.geometry.parameters; if(p.width===0.5&&p.height===0.6) m.scale.set(1.5,1.1,1.4); if(p.width===0.12&&p.height===0.6) m.scale.set(1.9,1,1.9); }); g.scale.set(1.25,1.25,1.25); const pecs=box(0.7,0.3,0.14,0xffffff); pecs.position.set(0,0.35,0.22); g.add(pecs); nameplate(g,'MATT WEI','#111111','#ffe66d'); return g; }
+function makeKevin(){ const g=makeHumanStyled(0xe8c39a,0xb5162b,0x3a3a40,0x111111); const book=box(0.14,0.2,0.04,0xb5162b); book.position.set(0.36,0.1,0.25); g.add(book); const glasses=box(0.3,0.06,0.04,0x111); glasses.position.set(0,0.7,0.17); g.add(glasses); nameplate(g,'KEVIN JIANG','#ffe66d','#b5162b'); return g; }
+function makeSaitama(){ const g=makeHumanStyled(0xf1c9a5,0xffe600,0xffe600,0xf1c9a5); g.traverse(m=>{ if(m.isMesh&&m.geometry&&m.geometry.parameters&&m.geometry.parameters.width===0.3&&m.geometry.parameters.height===0.1) m.visible=false; }); const cape=box(0.6,0.9,0.04,0xffffff); cape.position.set(0,0.15,-0.2); g.add(cape); const belt=box(0.52,0.08,0.32,0x111); belt.position.set(0,-0.08,0); g.add(belt); for(const x of [-0.31,0.31]){ const glove=sphere(0.09,0xd9342b,8,6); glove.position.set(x,-0.17,0); g.add(glove); } const boots1=box(0.2,0.2,0.24,0xd9342b); boots1.position.set(-0.11,-0.82,0); g.add(boots1); const boots2=boots1.clone(); boots2.position.x=0.11; g.add(boots2); nameplate(g,'ONE PUNCH MAN','#111111','#ffe600'); return g; }
+function makeTimmy(){ const g=new THREE.Group(), parts={legs:[],arms:[]}; const green=0x3fa33a, white=0xf4f4ea;
+  for(const x of [-0.08,0.08]){ const hip=new THREE.Group(); hip.position.set(x,-0.3,0); const leg=cyl(0.04,0.04,0.6,0xf4f4ea,6); leg.position.y=-0.3; hip.add(leg); const shoe=box(0.12,0.06,0.18,0x3a3a40); shoe.position.set(0,-0.6,0.03); hip.add(shoe); g.add(hip); parts.legs.push(hip); }
+  const bulb=cyl(0.2,0.14,0.5,white,10); bulb.position.y=-0.05; g.add(bulb); const roots=cyl(0.12,0.02,0.15,0xe8e2c8,6); roots.position.y=-0.36; g.add(roots);
+  const stalk=cyl(0.12,0.18,0.9,green,10); stalk.position.y=0.5; g.add(stalk);
+  for(const [rx,rz] of [[0.3,0],[-0.25,0.2],[0,-0.3]]){ const leaf=new THREE.Mesh(new THREE.ConeGeometry(0.09,0.7,6),mat(green)); leaf.position.set(rx*0.3,1.2,rz*0.3); leaf.rotation.set(rz,0,-rx); g.add(leaf); }
+  for(const x of [-0.07,0.07]){ const e=sphere(0.045,0x111,6,4); e.position.set(x,0.45,0.15); g.add(e); const hl=sphere(0.015,0xffffff,4,3); hl.position.set(x+0.015,0.465,0.185); g.add(hl); }
+  const smile=box(0.1,0.02,0.02,0x111); smile.position.set(0,0.33,0.16); g.add(smile);
+  for(const x of [-0.2,0.2]){ const sh=new THREE.Group(); sh.position.set(x,0.45,0); const arm=cyl(0.03,0.03,0.4,green,6); arm.position.y=-0.2; sh.add(arm); g.add(sh); parts.arms.push(sh); }
+  g.userData.parts=parts; nameplate(g,'TIMMY','#ffffff','#3fa33a'); return g; }
+function makeWah(){ const g=new THREE.Group(), parts={legs:[],arms:[]}; const shell=0x8a6a4a, skin=0xb08a6a;
+  const body=sphere(0.3,skin,12,10); body.scale.set(1,0.75,1.7); g.add(body);
+  for(let i=0;i<6;i++){ const band=cyl(0.31-Math.abs(i-2.5)*0.03,0.31-Math.abs(i-2.5)*0.03,0.14,i%2?shell:0x7a5a3a,14); band.rotation.x=Math.PI/2; band.scale.set(1,0.78,1); band.position.set(0,0.02,-0.4+i*0.16); g.add(band); }
+  const head=sphere(0.13,skin,10,8); head.scale.set(0.8,0.8,1.4); head.position.set(0,0.05,0.6); g.add(head); const nose=sphere(0.04,0x3a2a1a,6,4); nose.position.set(0,0.05,0.78); g.add(nose);
+  for(const x of [-1,1]){ const ear=new THREE.Mesh(new THREE.ConeGeometry(0.04,0.14,6),mat(skin)); ear.position.set(x*0.08,0.18,0.52); g.add(ear); const eye=sphere(0.025,0x111,6,4); eye.position.set(x*0.06,0.1,0.7); g.add(eye); }
+  const tail=new THREE.Mesh(new THREE.ConeGeometry(0.06,0.6,6),mat(shell)); tail.rotation.x=Math.PI/2+0.2; tail.position.set(0,-0.02,-0.75); g.add(tail);
+  for(const [x,z] of [[-0.18,0.3],[0.18,0.3],[-0.2,-0.3],[0.2,-0.3]]){ const l=new THREE.Group(); l.position.set(x,-0.15,z); const leg=cyl(0.04,0.04,0.2,skin,6); leg.position.y=-0.08; l.add(leg); g.add(l); parts.legs.push(l); }
+  g.userData.parts=parts; nameplate(g,'WAH','#ffffff','#8a6a4a'); g.children[g.children.length-1].position.y=0.7; g.children[g.children.length-2].position.y=0.7; return g; }
+function makeAngler(i){ const g=makeHumanStyled(SKINS[i%5],[0x3f6f3a,0x6a5a46,0x2f3f7a,0xd9c7a8][i%4],0x6a5a46,0x8a5a2b); const hat=cyl(0.3,0.3,0.05,0xd9c7a8,10); hat.position.y=0.86; g.add(hat); const crown=cyl(0.18,0.2,0.14,0xd9c7a8,10); crown.position.y=0.95; g.add(crown); const rod=cyl(0.015,0.025,2.2,0x3a2a1a,5); rod.position.set(0.4,0.6,0.9); rod.rotation.x=-1.0; g.add(rod); const line=box(0.008,1.4,0.008,0xdddddd); line.position.set(0.4,0.55,1.9); g.add(line); const bob=sphere(0.06,0xd9342b,6,4); bob.position.set(0.4,-0.15,1.9); g.add(bob); const bob2=sphere(0.05,0xffffff,6,4); bob2.position.set(0.4,-0.08,1.9); g.add(bob2); return g; }
+
+function makeCast(){
+  // Hudson and Matt Wei roam the sidewalks as a pair
+  const hud=addNPC(8,6.6,Math.PI/2,'walk','hudson',300,0,makeHudson()); hud.speed=1.15; hud.body.mass=4; hud.body.invMass=0.25;
+  const matt=addNPC(9.6,7.4,Math.PI/2,'follow','matt wei',301,0,makeMattWei()); matt.leader=hud; matt.speed=2.2; matt.body.mass=9; matt.body.invMass=1/9; matt.body.I*=3.6; matt.body.invI=1/matt.body.I;
+  whimsy.hudson=hud; whimsy.matt=matt;
+  // Kevin Jiang on a soapbox in the park
+  { const KX=-30,KZ=-10; const boxm=box(1.2,0.5,1.2,0x8a5f3d); boxm.position.set(KX,0.25,KZ); scene.add(boxm); addStatic(KX,0.25,KZ,0.6,0.25,0.6); footprint(KX-3,KX+3,KZ-3,KZ+3);
+    const pole=cyl(0.04,0.04,3.4,0x3a3a40,5); pole.position.set(KX+1.2,1.7,KZ-0.6); scene.add(pole); const flag=signPlane('☭',1.1,'#ffe66d','#b5162b'); flag.position.set(KX+1.75,3.0,KZ-0.6); scene.add(flag);
+    const k=addNPC(KX,KZ,Math.PI*0.9,'debate','kevin jiang',302,0.5,makeKevin()); k.walkPhase=0; whimsy.kevin=k;
+    whimsy.kevinQuotes=['SEIZE THE MEANS OF ACORN PRODUCTION','WORKERS OF THE PARK, UNITE!','FROM EACH SQUIRREL ACCORDING TO ABILITY','ABOLISH PRIVATE NUT PROPERTY','THE DIALECTIC IS NUTS','SHARE YOUR ACORNS, COMRADE','HISTORY IS ON THE SIDE OF THE RODENT'].map((q,i)=>{ const s=signPlane(q,6,'#ffe66d','#b5162b'); s.position.set(KX,3.0,KZ+0.4); s.rotation.y=Math.PI*0.9; s.visible=i===0; scene.add(s); return s; });
+    for(let i=0;i<3;i++) addNPC(KX+(i-1)*1.6+Math.sin(i)*0.3,KZ+2.6,Math.PI*0.9+Math.PI,'idle','comrade',303+i,0); }
+  // One Punch Man walks the city
+  { const s=addNPC(40,5.3,0,'walk','saitama',310,0,makeSaitama()); s.speed=1.4; s.punchT=0; s.body.mass=50; s.body.invMass=0.02; whimsy.saitama=s;
+    const flash=new THREE.Mesh(new THREE.SphereGeometry(1,10,8),new THREE.MeshBasicMaterial({color:0xffe600,transparent:true,opacity:0})); scene.add(flash); whimsy.punchFlash=flash; }
+  // Timmy the green onion
+  { const t=addNPC(-40,-5.3,0,'walk','timmy',311,0,makeTimmy()); t.speed=1.0; }
+  // Wah the armadillo (a low, long body)
+  { const b=addBody('npc',new V3(0.3,0.28,0.55),3,30,-5.3,0,makeWah(),{e:0.2,mu:0.8,label:'Wah'}); b.kinematic=true; b.mesh.traverse(m=>{ if(m.isMesh) m.castShadow=false; });
+    const n={body:b,state:'walk',home:{x:30,z:-5.3,yaw:0,state:'walk',y:0},role:'wah',target:randomSidewalk(),speed:0.9,fleeT:0,ragT:0,spookCd:0,walkPhase:rng()*6,localRag:false}; b.npc=n; npcs.push(n); }
+  // Ricky and Sara are easy to find: a wedding marker over the cathedral and signs pointing the way
+  { const heart=new THREE.Group(); for(const x of [-0.45,0.45]){ const h=sphere(0.7,0xff4a8a,12,10); h.position.set(x,0.4,0); heart.add(h); } const tip=new THREE.Mesh(new THREE.ConeGeometry(1.15,1.5,4),mat(0xff4a8a)); tip.rotation.set(Math.PI,Math.PI/4,0); tip.position.y=-0.4; heart.add(tip); heart.position.set(-60,38,61); scene.add(heart); whimsy.weddingHeart=heart;
+    const ws=signPlane('WEDDING TODAY · RICKY ♥ SARA · INSIDE',10,'#ffffff','#b5162b'); ws.position.set(-60,6.2,45.6); ws.rotation.y=Math.PI; scene.add(ws);
+    const post=cyl(0.06,0.06,3,0x3a3a40,5); post.position.set(-14,1.5,-21); scene.add(post); const arrow=signPlane('← RICKY & SARA\'S WEDDING · CATHEDRAL, NORTH-WEST',6,'#ffffff','#b5162b'); arrow.position.set(-14,2.6,-21); arrow.rotation.y=Math.PI/4; scene.add(arrow);
+    const ricky=npcs.find(n=>n.role==='groom'); whimsy.ricky=ricky; if(ricky){ const old=ricky.body.mesh.children.filter(c=>c.geometry&&c.geometry.type==='PlaneGeometry'); old.forEach(c=>ricky.body.mesh.remove(c)); nameplate(ricky.body.mesh,'RICKY · VERY ATTRACTIVE','#ffffff','#b5162b'); const hair=sphere(0.19,0x2a1d14,10,8); hair.scale.set(1,0.7,1); hair.position.set(0,0.82,-0.02); ricky.body.mesh.add(hair); const jaw=box(0.3,0.08,0.2,0xd9a376); jaw.position.set(0,0.53,0.08); ricky.body.mesh.add(jaw);
+      whimsy.sparkles=[]; for(let i=0;i<6;i++){ const sp=new THREE.Mesh(new THREE.SphereGeometry(0.06,5,4),new THREE.MeshBasicMaterial({color:0xfff23d})); scene.add(sp); whimsy.sparkles.push(sp); }
+      for(const [x,z] of [[-2.4,2.2],[2.6,2.4]]){ const a=addNPC(ricky.body.pos.x+x,ricky.body.pos.z-z,Math.PI,'idle','admirer',320,0.4); const hs=sphere(0.12,0xff4a8a,8,6); hs.position.set(-0.08,1.15,0); a.body.mesh.add(hs); const hs2=sphere(0.12,0xff4a8a,8,6); hs2.position.set(0.08,1.15,0); a.body.mesh.add(hs2); } } }
+  // Lake Pleasanton, west of town: anglers, a dock, and the FISHING GAME
+  { const LX=-110,LZ=30; const sand=new THREE.Mesh(new THREE.CircleGeometry(14,32),new THREE.MeshLambertMaterial({color:0xd9c7a8})); sand.rotation.x=-Math.PI/2; sand.position.set(LX,0.03,LZ); scene.add(sand);
+    const water=new THREE.Mesh(new THREE.CircleGeometry(12,32),new THREE.MeshLambertMaterial({color:0x3a7fb8})); water.rotation.x=-Math.PI/2; water.position.set(LX,0.05,LZ); scene.add(water); whimsy.lake={x:LX,z:LZ,r:12,mesh:water};
+    const path=new THREE.Mesh(new THREE.PlaneGeometry(26,4),new THREE.MeshLambertMaterial({color:0xb8a070})); path.rotation.x=-Math.PI/2; path.rotation.z=0.9; path.position.set(-102,0.02,10); scene.add(path);
+    for(let i=0;i<18;i++){ const a=i/18*Math.PI*2; const reed=new THREE.Mesh(new THREE.ConeGeometry(0.08,1.2+rng()*0.6,5),mat(0x5a8a3a)); reed.position.set(LX+Math.cos(a)*12.6,0.6,LZ+Math.sin(a)*12.6); scene.add(reed); }
+    const dock=box(2,0.3,9,0x8a5f3d); dock.position.set(LX,0.3,LZ-13); scene.add(dock); addStatic(LX,0.3,LZ-13,1,0.15,4.5); for(const z of [-17,-13,-9]) for(const x of [-0.9,0.9]){ const p=cyl(0.1,0.1,1,0x6b4a2e,6); p.position.set(LX+x,0.25,LZ+z); scene.add(p); }
+    const post=cyl(0.08,0.08,3,0x3a2a1a,6); post.position.set(LX+1.8,1.5,LZ-18); scene.add(post); const sign=signPlane('FISHING GAME',4,'#ffffff','#1d6b3a'); sign.position.set(LX+1.8,2.8,LZ-18); sign.rotation.y=Math.PI; scene.add(sign);
+    const sub=signPlane('STAND AT THE END OF THE DOCK · PRESS E',4.5,'#111111','#ffe66d'); sub.position.set(LX+1.8,2.1,LZ-18); sub.rotation.y=Math.PI; scene.add(sub);
+    const ls=signPlane('LAKE PLEASANTON',6,'#ffffff','#2f7de1'); ls.position.set(LX-8,2.4,LZ-14); ls.rotation.y=Math.PI*0.8; scene.add(ls);
+    whimsy.dockEnd={x:LX,z:LZ-9};
+    for(let i=0;i<4;i++){ const a=Math.PI*0.55+i*0.5; const x=LX+Math.cos(a)*13.2, z=LZ+Math.sin(a)*13.2; addNPC(x,z,Math.atan2(LX-x,LZ-z),'idle','angler',330+i,0,makeAngler(i)); }
+    addNPC(LX-1.2,LZ-10,0,'idle','angler',334,0.45,makeAngler(4));
+    footprint(LX-15,LX+15,LZ-19,LZ+15);
+    ZONES.push({name:'GONE FISHING',pts:20,x:LX,z:LZ-13,hx:1.2,hz:5,y0:-1,y1:3,cd:0}); }
+}
+// ---------------- neon wedding signs, In-N-Out ----------------
+function makeNeonSigns(){
+  const target={x:-60,z:61}; whimsy.neon=[];
+  for(const [x,z] of [[-8,-14],[2,12],[-24,8],[22,-8],[-46,16],[-44,40],[-60,41],[40,42],[-22,-44],[88,6],[-30,46],[60,-6],[-70,-6],[20,-40]]){
+    const dx=target.x-x, dz=target.z-z; const yaw=Math.atan2(dx,dz);
+    const post=cyl(0.07,0.07,3.6,0x3a3a40,6); post.position.set(x,1.8,z); scene.add(post);
+    const on=signPlane('RICKY ♥ SARA WEDDING  ↑ THIS WAY',6,'#ff2d95','#120a18'); on.material.side=THREE.DoubleSide; on.position.set(x,3.3,z); on.rotation.y=yaw; scene.add(on);
+    const off=signPlane('RICKY ♥ SARA WEDDING  ↑ THIS WAY',6,'#7a1648','#120a18'); off.material.side=THREE.DoubleSide; off.position.set(x,3.3,z); off.rotation.y=yaw; off.visible=false; scene.add(off);
+    const arrow=new THREE.Mesh(new THREE.ConeGeometry(0.35,1.1,8),new THREE.MeshBasicMaterial({color:0xff2d95})); arrow.rotation.x=Math.PI/2; const piv=new THREE.Group(); piv.position.set(x,4.4,z); piv.rotation.y=yaw; piv.add(arrow); scene.add(piv);
+    const l=vlight(0xff2d95,1.3,9,2); l.position.set(x,2.6,z); scene.add(l);
+    whimsy.neon.push({on,off,arrow:piv,ph:(x*7+z*3)%6});
+  }
+}
+function innoutInterior(g,o){
+  const counter=box(10,1.1,1.2,0xd9342b); counter.position.set(0,0.55,-3.5); g.add(counter); addStatic(o.x,0.55,o.z-3.5,5,0.55,0.6); const top=box(10.2,0.1,1.3,0xffffff); top.position.set(0,1.12,-3.5); g.add(top);
+  const menu=signPlane('DOUBLE-DOUBLE · ANIMAL STYLE · FRIES WELL DONE · NEAPOLITAN SHAKE',12,'#ffffff','#d9342b'); menu.position.set(0,3.6,-6.6); g.add(menu);
+  const secret=signPlane('NOT-SO-SECRET MENU: 4x4 · PROTEIN STYLE · ACORN STYLE',9,'#d9342b','#ffe600'); secret.position.set(0,2.7,-6.6); g.add(secret);
+  for(const x of [-6,-2,2,6]){ const t=box(1.6,0.08,1.0,0xffffff); t.position.set(x,0.85,3); g.add(t); const leg=cyl(0.08,0.12,0.85,0x8a8f9a,8); leg.position.set(x,0.42,3); g.add(leg); addStatic(o.x+x,0.5,o.z+3,0.8,0.5,0.5); }
+  const tile=new THREE.Mesh(new THREE.PlaneGeometry(o.w-0.5,2),new THREE.MeshLambertMaterial({color:0xffffff})); tile.rotation.x=-Math.PI/2; tile.position.set(0,0.03,-5); g.add(tile);
+  for(const x of [-3,0,3]) addNPC(o.x+x,o.z-5,0,'idle','in-n-out crew',340,0,(()=>{ const m=makeHumanStyled(SKINS[(x+3)%5],0xffffff,0xffffff,0x111111); const apron=box(0.5,0.5,0.02,0xd9342b); apron.position.set(0,0.0,0.17); m.add(apron); const hat=box(0.34,0.16,0.3,0xffffff); hat.position.y=0.9; m.add(hat); const band=box(0.36,0.04,0.32,0xd9342b); band.position.y=0.84; m.add(band); return m; })());
+  for(const [x,z] of [[-6,4.5],[2,4.5],[6,1.5]]) addNPC(o.x+x,o.z+z,z>3?0:Math.PI,'idle','customer',343,0);
+}
+function makeInNOut(){
+  const IX=92,IZ=-14;
+  makeBuilding({x:IX,z:IZ,w:18,d:14,h:5,color:0xffffff,floor:0xd9342b,roofColor:0xd9342b,door:'+z',sign:'IN-N-OUT BURGER',signColor:'#ffffff',signBg:'#d9342b',signW:9,interior:innoutInterior,name:'In-N-Out',doorColor:0xd9342b});
+  const stripe=box(18.2,0.6,14.2,0xffe600); stripe.position.set(IX,4.2,IZ); scene.add(stripe);
+  // the arrow
+  const pole=cyl(0.15,0.15,12,0xd9342b,8); pole.position.set(IX+11,6,IZ+6); scene.add(pole); addStatic(IX+11,6,IZ+6,0.2,6,0.2);
+  const shaft=box(0.4,1.2,5,0xffe600); shaft.position.set(IX+11,11.5,IZ+6); scene.add(shaft); const head=new THREE.Mesh(new THREE.ConeGeometry(1.2,2.2,4),mat(0xffe600)); head.rotation.set(Math.PI/2,Math.PI/4,0); head.position.set(IX+11,11.5,IZ+9.5); scene.add(head);
+  const big=signPlane('IN-N-OUT',5,'#d9342b','#ffe600'); big.position.set(IX+11.25,11.5,IZ+6); big.rotation.y=Math.PI/2; scene.add(big); const big2=signPlane('IN-N-OUT',5,'#d9342b','#ffe600'); big2.position.set(IX+10.75,11.5,IZ+6); big2.rotation.y=-Math.PI/2; scene.add(big2);
+  for(let i=0;i<8;i++){ const b=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,4),new THREE.MeshBasicMaterial({color:0xffffff})); b.position.set(IX+11.22,9.4+i*0.7,IZ+6); scene.add(b); }
+  // crossed palms
+  for(const s of [-1,1]){ const trunk=cyl(0.25,0.35,9,0x8a6a4a,8); trunk.rotation.z=s*0.38; trunk.position.set(IX-12+s*1.6,4.2,IZ+8); scene.add(trunk); for(let k=0;k<6;k++){ const a=k/6*Math.PI*2; const leaf=new THREE.Mesh(new THREE.ConeGeometry(0.3,2.8,5),mat(0x3f8f3a)); leaf.position.set(IX-12+s*1.6-s*3.4+Math.cos(a)*1.0,8.3+Math.sin(k)*0.2,IZ+8+Math.sin(a)*1.0); leaf.rotation.set(Math.sin(a)*1.2,0,-Math.cos(a)*1.2); scene.add(leaf); } }
+  addStatic(IX-12-1.6,4.5,IZ+8,0.4,4.5,0.4); addStatic(IX-12+1.6,4.5,IZ+8,0.4,4.5,0.4);
+  // drive-thru lane and the car that is always in it
+  const lane=new THREE.Mesh(new THREE.PlaneGeometry(4,30),new THREE.MeshLambertMaterial({color:0x4a4a52})); lane.rotation.x=-Math.PI/2; lane.position.set(IX+12,0.012,IZ-2); scene.add(lane);
+  const dt=signPlane('DRIVE-THRU →',3.5,'#ffffff','#d9342b'); dt.position.set(IX+9.6,2.4,IZ+2); dt.rotation.y=Math.PI/2; scene.add(dt);
+  const spk=box(0.5,1.4,0.4,0xd9342b); spk.position.set(IX+9.6,0.7,IZ-4); scene.add(spk); addStatic(IX+9.6,0.7,IZ-4,0.25,0.7,0.2);
+  addBody('car',new V3(2.1,0.8,0.95),12,IX+12,IZ-4,0,makeCar(0xf0c33a),{e:0.2,mu:0.5,label:'car'});
+  // burgers, fries and stools
+  for(const [x,z] of [[-6,3],[-2,3],[2,3],[6,3],[-1.5,-2.6],[1.5,-2.6]]) addBody('burger',new V3(0.17,0.1,0.17),0.3,IX+x,IZ+z,0,(()=>{ const gg=new THREE.Group(); const bun=cyl(0.17,0.17,0.07,0xd9a376,10); bun.position.y=-0.06; gg.add(bun); const patty=cyl(0.17,0.17,0.05,0x5a3a26,10); gg.add(patty); const cheese=box(0.3,0.015,0.3,0xffc107); cheese.position.y=0.03; gg.add(cheese); const top=sphere(0.17,0xd9a376,10,6); top.scale.set(1,0.5,1); top.position.y=0.06; gg.add(top); return gg; })(),{label:'Double-Double',y:0.9});
+  for(const [x,z] of [[-5.3,3],[2.7,3],[6.7,3]]) addBody('fries',new V3(0.1,0.14,0.07),0.2,IX+x,IZ+z,0,(()=>{ const gg=new THREE.Group(); const cup=box(0.2,0.2,0.12,0xd9342b); cup.position.y=-0.04; gg.add(cup); for(let k=0;k<5;k++){ const f=box(0.03,0.22,0.03,0xffe066); f.position.set(-0.06+k*0.03,0.12,(k%2)*0.04-0.02); f.rotation.z=(k-2)*0.12; gg.add(f); } return gg; })(),{label:'fries',y:0.9});
+  for(const [x,z] of [[-7,5],[-5,5],[-3,5],[-1,5],[1,5],[3,5],[5,5],[7,5]]) addBody('stool',new V3(0.22,0.35,0.22),1.2,IX+x,IZ+z,0,(()=>{ const gg=new THREE.Group(); const seat=cyl(0.22,0.22,0.08,0xd9342b,12); seat.position.y=0.3; gg.add(seat); const post=cyl(0.04,0.04,0.6,0x8a8f9a,6); gg.add(post); const base=cyl(0.2,0.2,0.04,0x8a8f9a,12); base.position.y=-0.32; gg.add(base); return gg; })(),{label:'stool'});
+  ZONES.push({name:'ANIMAL STYLE',pts:60,x:IX,z:IZ,hx:9,hz:7,y0:-1,y1:5,cd:0});
+}
+// ---------------- the Honey Bucket: an ominous clearing, and what lies beyond ----------------
+function makeHoneyBucket(){
+  const HX=-112,HZ=-52; whimsy.potties=[];
+  const dirt=new THREE.Mesh(new THREE.CircleGeometry(19,32),new THREE.MeshLambertMaterial({color:0x2a2420})); dirt.rotation.x=-Math.PI/2; dirt.position.set(HX,0.03,HZ); scene.add(dirt);
+  for(let i=0;i<7;i++){ const a=i/7*Math.PI*2+0.3; const r=5+(i%3)*3; const p=new THREE.Mesh(new THREE.CircleGeometry(1.2+(i%2),10),new THREE.MeshLambertMaterial({color:0x151010})); p.rotation.x=-Math.PI/2; p.position.set(HX+Math.cos(a)*r,0.04,HZ+Math.sin(a)*r); scene.add(p); }
+  for(let i=0;i<12;i++){ const a=i/12*Math.PI*2; const r=13+(i%2)*4; const x=HX+Math.cos(a)*r, z=HZ+Math.sin(a)*r; const h=5+(i%3)*1.5; const trunk=cyl(0.18,0.32,h,0x1e1a16,7); trunk.position.set(x,h/2,z); trunk.rotation.z=(i%2?1:-1)*0.08; scene.add(trunk); addStatic(x,h/2,z,0.3,h/2,0.3); for(let k=0;k<3;k++){ const br=cyl(0.04,0.1,2.2,0x1e1a16,5); br.position.set(x+Math.cos(a+k*2)*0.9,h*0.6+k*0.8,z+Math.sin(a+k*2)*0.9); br.rotation.set(Math.sin(a+k)*1.1,0,Math.cos(a+k)*1.1); scene.add(br); } }
+  trees.push(...[]); footprint(HX-20,HX+20,HZ-20,HZ+20);
+  for(let i=0;i<5;i++){ const a=i/5*Math.PI*2; const c=cyl(0.06,0.06,0.5,0xfff4d6,6); c.position.set(HX+Math.cos(a)*2.6,0.25,HZ+Math.sin(a)*2.6); scene.add(c); const f=new THREE.Mesh(new THREE.SphereGeometry(0.09,5,4),new THREE.MeshBasicMaterial({color:0xff4a1a})); f.position.set(HX+Math.cos(a)*2.6,0.55,HZ+Math.sin(a)*2.6); scene.add(f); }
+  const red=vlight(0xff2a1a,1.6,16,2); red.position.set(HX,2.2,HZ); scene.add(red);
+  whimsy.crows=[]; for(let i=0;i<7;i++){ const g=new THREE.Group(); const b=sphere(0.16,0x0a0a0c,6,5); b.scale.set(0.8,0.7,1.4); g.add(b); for(const s of [-1,1]){ const wing=box(0.9,0.03,0.25,0x0a0a0c); wing.position.set(s*0.5,0.05,0); g.add(wing); } scene.add(g); whimsy.crows.push({g,ph:i*0.9,r:6+i*1.1,h:9+i*0.8}); }
+  for(const [x,z,txt] of [[HX+10,HZ+14,'TURN BACK'],[HX-12,HZ+10,'NOTHING GOOD IS IN THERE'],[HX+2,HZ+6,'HONEY BUCKET · OUT OF ORDER (LIES)']]){ const post=cyl(0.06,0.06,1.8,0x1e1a16,5); post.position.set(x,0.9,z); scene.add(post); const s=signPlane(txt,3.2,'#ff2a1a','#0a0a0c'); s.position.set(x,1.7,z); s.rotation.y=Math.atan2(HX-x,HZ-z)+Math.PI; scene.add(s); }
+  // the bucket itself: walk in to find out
+  const bucket=(x,z,yaw,label)=>{ const g=new THREE.Group(); const body=box(1.3,2.3,1.3,0x2b4bb0); body.position.y=1.15; g.add(body); const roof=box(1.4,0.12,1.4,0xf4f0e4); roof.position.y=2.33; g.add(roof); const door=box(0.9,2.0,0.06,0x1d3a8a); door.position.set(0,1.05,0.66); g.add(door); const vent=box(0.4,0.3,0.06,0x111); vent.position.set(0,1.9,0.67); g.add(vent); const s=signPlane(label,1.3,'#ffffff','#1d3a8a'); s.position.set(0,1.5,0.7); g.add(s); g.position.set(x,0,z); g.rotation.y=yaw; scene.add(g); const back=new V3(0,0,-0.45).applyAxisAngle(UP,yaw); addStatic(x+back.x,1.15,z+back.z,0.65,1.15,0.2); const sides=[new V3(-0.65,0,0).applyAxisAngle(UP,yaw),new V3(0.65,0,0).applyAxisAngle(UP,yaw)]; for(const sd of sides) addStatic(x+sd.x,1.15,z+sd.z,Math.abs(sd.x)>0.3?0.1:0.65,1.15,Math.abs(sd.z)>0.3?0.1:0.65); return g; };
+  bucket(HX,HZ,0,'HONEY BUCKET');
+  // the party, sealed away where no map shows it
+  const PX=-112,PZ=-90,PH=5; const g=new THREE.Group(); scene.add(g);
+  for(const [cx,cz,w,d] of [[0,8,18,0.4],[0,-8,18,0.4],[8.8,0,0.4,16],[-8.8,0,0.4,16]]){ const wall=box(w,PH,d,0x120a18); wall.position.set(PX+cx,PH/2,PZ+cz); scene.add(wall); addStatic(PX+cx,PH/2,PZ+cz,w/2,PH/2,d/2); }
+  const roof=box(18,0.3,16.4,0x0a0612); roof.position.set(PX,PH+0.15,PZ); scene.add(roof); addStatic(PX,PH+0.15,PZ,9,0.15,8.2); footprint(PX-10,PX+10,PZ-10,PZ+10);
+  const floor=new THREE.Mesh(new THREE.PlaneGeometry(17.6,15.6),new THREE.MeshLambertMaterial({color:0x1a1030})); floor.rotation.x=-Math.PI/2; floor.position.set(PX,0.02,PZ); scene.add(floor);
+  const tiles=danceTiles(g,PX,PZ-1,8,6,1.5,[0xff6a2d,0xffd23a,0xff2d95,0x9fd356],0.04);
+  const lights=partyLights(g,[[PX-6,PZ-4],[PX+6,PZ-4],[PX,PZ+5]],[0xffd23a,0xff6a2d,0xff2d95],4.2);
+  const strobe=vlight(0xffffff,0,22,2); strobe.position.set(PX,4.5,PZ); g.add(strobe);
+  const ball=new THREE.Mesh(new THREE.SphereGeometry(0.5,16,12),new THREE.MeshStandardMaterial({color:0xffffff,metalness:1,roughness:0.15,flatShading:true})); ball.position.set(PX,4.2,PZ-1); scene.add(ball);
+  const booth=box(4,0.8,1,0x2a1d4a); booth.position.set(PX,0.4,PZ-6.5); scene.add(booth); addStatic(PX,0.4,PZ-6.5,2,0.4,0.5);
+  const neon=signPlane('SECRET SQUIRREL PARTY · YOU WERE NEVER HERE',9,'#ffd23a','#1a1030'); neon.position.set(PX,3.4,PZ-7.6); scene.add(neon);
+  const rules=signPlane('NO HUMANS · NO PIGEONS · ACORNS ARE FREE',7,'#ff2d95','#1a1030'); rules.position.set(PX-8.6,2.4,PZ); rules.rotation.y=Math.PI/2; scene.add(rules);
+  for(let i=0;i<11;i++){ const sq=makeSquirrel(FURS[i%FURS.length].c); sq.holder.userData.parts=sq.parts; const x=PX+(rng()-0.5)*11, z=PZ-1+(rng()-0.5)*8; const b=addBody('npc',new V3(0.3,0.4,0.3),1.5,x,z,rng()*6.28,sq.holder,{e:0.2,mu:0.8,label:'party squirrel'}); b.kinematic=true; const n={body:b,state:'dance',home:{x,z,yaw:0,state:'dance',y:0},role:'party squirrel',target:null,speed:0,fleeT:0,ragT:0,spookCd:0,walkPhase:rng()*6,localRag:false}; b.npc=n; npcs.push(n); }
+  { const sq=makeSquirrel(0xd9a441); sq.holder.userData.parts=sq.parts; nameplate(sq.holder,'DJ NUTZ','#1a1030','#ffd23a'); const b=addBody('npc',new V3(0.3,0.4,0.3),1.5,PX,PZ-7.3,0,sq.holder,{e:0.2,mu:0.8,label:'DJ Nutz'}); b.kinematic=true; const n={body:b,state:'dance',home:{x:PX,z:PZ-7.3,yaw:0,state:'dance',y:0},role:'dj nutz',target:null,speed:0,fleeT:0,ragT:0,spookCd:0,walkPhase:0,localRag:false}; b.npc=n; npcs.push(n); }
+  for(let i=0;i<14;i++) addBody('nut',new V3(0.12,0.14,0.12),0.15,PX+(rng()-0.5)*14,PZ+(rng()-0.5)*12,0,(()=>{ const gg=new THREE.Group(); const nut=sphere(0.12,0xb07a3c,8,6); nut.scale.y=1.25; gg.add(nut); const cap=cyl(0.11,0.13,0.07,0x6b4a2e,8); cap.position.y=0.1; gg.add(cap); return gg; })(),{label:'acorn'});
+  for(const x of [-4,4]) addBody('speaker',new V3(0.45,0.8,0.45),5,PX+x,PZ-6.3,0,makeSpeaker(),{label:'speaker'});
+  bucket(PX+7.2,PZ+6,Math.PI,'EXIT');
+  makeParty({name:'SQUIRREL PARTY',pts:150,x:PX,z:PZ,hx:9,hz:8,y0:-1,y1:PH,lights,strobe,tiles,ball,pal:[0xff6a2d,0xffd23a,0xff2d95,0x9fd356]});
+  whimsy.potties.push({x:HX,z:HZ,y:0,to:[PX+7.2,0,PZ+4.2],msg:'???',sub:'the squirrels have been expecting you'});
+  whimsy.potties.push({x:PX+7.2,z:PZ+6,y:0,to:[HX,0,HZ+2.4],msg:'BACK OUTSIDE',sub:'tell no one'});
+  whimsy.ominous={x:HX,z:HZ};
+}
+makeHoneyBucket();
+
+makeNeonSigns(); makeInNOut();
+
+makeCast();
 
 // ---------------- squirrel mesh ----------------
 function makeSquirrel(fur){
@@ -1184,6 +1337,7 @@ function tailGrab(){
     trick('TAIL FLING',40); return;
   }
   if(tryFly()) return;
+  if(tryFish()) return;
   if(player.driving){ exitCar(); return; }
   { let car=null,cd=3.2; for(const b of bodies){ if(b.kind!=='car'||b.held||b.driver) continue; const d=Math.hypot(b.pos.x-player.pos.x,b.pos.z-player.pos.z); if(d<cd){ cd=d; car=b; } } if(car){ enterCar(car); return; } }
   for(const e of whimsy.elevators){ if(Math.hypot(player.pos.x-e.x,player.pos.z-e.z)<2&&Math.abs(player.pos.y-(e.y||0))<2.5){ player.pos.set(e.to[0],e.to[1],e.to[2]); player.vel.set(0,0,0); if(isLocal()) cam.pos.set(0,0,0); centerMsg(e.msg,'Ding!'); beep(700,0.2,'sine',0.05); if(e.msg==='PENTHOUSE'&&simNow()>(player.cd.pent||0)){ player.cd.pent=simNow()+60000; trick('PENTHOUSE PARTY',100); } return; } }
@@ -1196,6 +1350,8 @@ function tailGrab(){
   best.held=player; player.held=best; best.wake();
   trick(best.kind==='duck'?'DUCK NAPPED':'TAIL GRAB',best.kind==='duck'?80:10);
 }
+const FISH=['TROUT','BASS','CATFISH','GOLDFISH','OLD BOOT','ACORN (SOGGY)','KOI','PIKE','RUBBER DUCK (ANOTHER ONE)','SALMON','MINNOW','SEA BASS','BLUEGILL'];
+function tryFish(){ if(!whimsy.dockEnd) return false; if(Math.hypot(player.pos.x-whimsy.dockEnd.x,player.pos.z-whimsy.dockEnd.z)>2.2||player.pos.y>2) return false; if(player.fishT){ return true; } player.fishT=simNow(); centerMsg('FISHING…','wait for the bite'); beep(500,0.1,'sine',0.04); return true; }
 function carYaw(b){ const f=new V3(0,0,1).applyQuaternion(b.quat); return Math.atan2(f.x,f.z); }
 function enterCar(car){
   if(player.held) tailGrab(); player.driving=car; player.carSpeed=0; player.carYaw=carYaw(car); car.wake(); car.asleep=false; car.angVel.set(0,0,0); car.quat.setFromAxisAngle(UP,player.carYaw); car.pos.y=car.half.y;
@@ -1244,13 +1400,14 @@ function jump(){
   else if(player.jumps<2){ player.vel.y=8.5; player.jumps=2; player.spinV=14; trick('TAIL FLIP',15); }
 }
 
-const ROLE_TRICKS={dj:['DJ DOWN',150],bouncer:['BOUNCER BOUNCED',120],dancer:['RAVER FLATTENED',100],fighter:['K.O.!',200],baller:['POSTERIZED',250],candidate:['DEBATE DISRUPTED',300],moderator:['MODERATOR DOWN',120],audience:['HECKLER HECKLED',80],pilot:['PILOT DOWN',150],'flight attendant':['UNRULY PASSENGER',120],passenger:['UNRULY PASSENGER',100],'frat bro':['FRAT BRO FLATTENED',100],professor:['OFFICE HOURS CANCELLED',150],student:['DROPPED OUT',100],engineer:['DEPLOYED ON A FRIDAY',150],alien:['CLOSE ENCOUNTER',150],'alien dj':['ZORP DOWN',250],abductee:['FARMER DALE DOWN',80],'office worker':['LAID OFF',100],resident:['HOME INVASION',150],shopkeeper:['SHOP LIFTED',100],mannequin:['MANNEQUIN MANGLED',40],vampire:['VAMPIRE SLAYER',300],'gate agent':['FLIGHT DELAYED',100],traveler:['LOST TRAVELER',80],cashier:['PRICE CHECK',100],receptionist:['NO APPOINTMENT',100],priest:['EXCOMMUNICATED',200],parishioner:['MASS DISRUPTED',100],groom:['OBJECTION!',300],bride:['RUNAWAY BRIDE',300],'imperial soldier':['DISHONORED',120],'shogunate soldier':['DISHONORED',120],kendrick:['STAGE RUSHED',300],'backup dancer':['BACKUP DANCER DOWN',100],fan:['MOSH PIT',60],breakdancer:['BATTLE WON',150],'hype man':['HYPE OVER',80],onlooker:['BOWLED PEDESTRIAN',100],mother:['MOM IS DISAPPOINTED',150],father:['DAD JOKE INTERRUPTED',150],daughter:['SIBLING RIVALRY',100]};
+const ROLE_TRICKS={dj:['DJ DOWN',150],bouncer:['BOUNCER BOUNCED',120],dancer:['RAVER FLATTENED',100],fighter:['K.O.!',200],baller:['POSTERIZED',250],candidate:['DEBATE DISRUPTED',300],moderator:['MODERATOR DOWN',120],audience:['HECKLER HECKLED',80],pilot:['PILOT DOWN',150],'flight attendant':['UNRULY PASSENGER',120],passenger:['UNRULY PASSENGER',100],'frat bro':['FRAT BRO FLATTENED',100],professor:['OFFICE HOURS CANCELLED',150],student:['DROPPED OUT',100],engineer:['DEPLOYED ON A FRIDAY',150],alien:['CLOSE ENCOUNTER',150],'alien dj':['ZORP DOWN',250],abductee:['FARMER DALE DOWN',80],'office worker':['LAID OFF',100],resident:['HOME INVASION',150],shopkeeper:['SHOP LIFTED',100],mannequin:['MANNEQUIN MANGLED',40],vampire:['VAMPIRE SLAYER',300],'gate agent':['FLIGHT DELAYED',100],traveler:['LOST TRAVELER',80],cashier:['PRICE CHECK',100],receptionist:['NO APPOINTMENT',100],hudson:['HUDSON IS NOT AMUSED',200],'matt wei':['MATT WEI WALKED IT OFF',250],'kevin jiang':['COUNTER-REVOLUTION',200],comrade:['COMRADE DOWN',80],timmy:['TIMMY CHOPPED',120],wah:['WAH!',150],angler:['FISH STORY',80],admirer:['HEARTBROKEN',60],'in-n-out crew':['ORDER UP',100],customer:['DOUBLE-DOUBLE DROPPED',80],'party squirrel':['SQUIRREL ON SQUIRREL',120],'dj nutz':['DJ NUTZ DOWN',200],priest:['EXCOMMUNICATED',200],parishioner:['MASS DISRUPTED',100],groom:['OBJECTION!',300],bride:['RUNAWAY BRIDE',300],'imperial soldier':['DISHONORED',120],'shogunate soldier':['DISHONORED',120],kendrick:['STAGE RUSHED',300],'backup dancer':['BACKUP DANCER DOWN',100],fan:['MOSH PIT',60],breakdancer:['BATTLE WON',150],'hype man':['HYPE OVER',80],onlooker:['BOWLED PEDESTRIAN',100],mother:['MOM IS DISAPPOINTED',150],father:['DAD JOKE INTERRUPTED',150],daughter:['SIBLING RIVALRY',100]};
 function npcTrick(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[0]; }
 function npcPts(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[1]; }
-const KIND_TRICKS={car:['CAR SMASH',75],speaker:['SOUND SYSTEM DOWN',60],can:['CLEANUP ON AISLE 3',10],cereal:['CLEANUP ON AISLE 3',10],duck:['DUCK PUNT',40],pump:['PUMP IT UP',50],podium:['PODIUM TOSS',80],ball:['BUZZER BEATER',20],keg:['KEG STAND',80],cup:['CUP CHAOS',5],laptop:['LAPTOP LAUNCHED',30],rack:['UNPLUGGED PROD',200],coffin:['GRAVE ROBBER',120],suitcase:['LOST LUGGAGE',30],cart:['CART CHAOS',25],vase:['VASE SMASHED',15],lamp:['LAMP DUNKED',15],bottle:['BAR FIGHT',10],chair:['CHAIR TOSS',15],plant:['PLANT PUNTED',15],bell:['RING THE BELL',150],cannonball:['CANNONBALL RETURNED',100],cake:['CAKE SMASHED',150],boombox:['BOOMBOX BUMPED',40],bowl:['DINNER RUINED',40]};
+const KIND_TRICKS={car:['CAR SMASH',75],speaker:['SOUND SYSTEM DOWN',60],can:['CLEANUP ON AISLE 3',10],cereal:['CLEANUP ON AISLE 3',10],duck:['DUCK PUNT',40],pump:['PUMP IT UP',50],podium:['PODIUM TOSS',80],ball:['BUZZER BEATER',20],keg:['KEG STAND',80],cup:['CUP CHAOS',5],laptop:['LAPTOP LAUNCHED',30],rack:['UNPLUGGED PROD',200],coffin:['GRAVE ROBBER',120],suitcase:['LOST LUGGAGE',30],cart:['CART CHAOS',25],vase:['VASE SMASHED',15],lamp:['LAMP DUNKED',15],bottle:['BAR FIGHT',10],chair:['CHAIR TOSS',15],plant:['PLANT PUNTED',15],bell:['RING THE BELL',150],cannonball:['CANNONBALL RETURNED',100],cake:['CAKE SMASHED',150],boombox:['BOOMBOX BUMPED',40],bowl:['DINNER RUINED',40],burger:['BURGER FLIPPED',20],fries:['FRIES SPILLED',15],stool:['STOOL TOSS',15],nut:['ACORN NICKED',5]};
 function kindTrick(b){ if(b.kind==='door'){ if(!b.broken){ b.broken=true; return ['BREAKING AND ENTERING',75]; } return ['DOOR SLAM',10]; } return KIND_TRICKS[b.kind]||['HEADBUTT',25]; }
 function ragdollNPC(n,imp,by){
   if(n.state==='rag') return;
+  if(n.role==='saitama'){ if(by&&by.slot!=null){ const save=player; player=by; enterRagdoll(new V3((srng()-0.5)*30,15,(srng()-0.5)*30)); trick('YOU TRIED',1); centerMsg('ONE PUNCH','you were never going to win that'); player=save; } return; }
   n.state='rag'; n.ragT=0; const b=n.body; b.kinematic=false; b.wake();
   if(imp) b.applyImpulse(imp,null);
   b.vel.y+=3; b.angVel.set((srng()-0.5)*8,(srng()-0.5)*4,(srng()-0.5)*8);
@@ -1266,14 +1423,18 @@ function updateNPCs(dt){
       n.ragT+=dt;
       if(n.ragT>5&&b.vel.lengthSq()<0.3&&b.pos.y<1.2){
         b.kinematic=true; b.asleep=false; b.vel.set(0,0,0); b.angVel.set(0,0,0); b.pos.y=b.half.y;
-        if(n.home.state==='walk'){ n.state='walk'; b.quat.setFromAxisAngle(UP,srng()*6.28); n.target=randomSidewalkRT(); }
+        if(n.home.state==='walk'||n.home.state==='follow'){ n.state=n.home.state; b.quat.setFromAxisAngle(UP,srng()*6.28); n.target=randomSidewalkRT(); }
         else { n.state=n.home.state; b.pos.set(n.home.x,(n.home.y||0)+b.half.y,n.home.z); b.quat.setFromAxisAngle(UP,n.home.yaw); }
       }
       continue;
     }
     if(n.state==='dance'||n.state==='idle'||n.state==='debate'||n.state==='breakdance'){ b.vel.set(0,0,0); continue; }
     let dx,dz,speed;
-    if(n.state==='war'){
+    if(n.state==='follow'){
+      const L=n.leader; const lb=L.body; const lf=new V3(0,0,1).applyQuaternion(lb.quat); const gx=lb.pos.x-lf.x*1.4+lf.z*0.9, gz=lb.pos.z-lf.z*1.4-lf.x*0.9;
+      dx=gx-b.pos.x; dz=gz-b.pos.z; const fd=Math.hypot(dx,dz); speed=fd>1.2?Math.min(n.speed,fd*2):0; if(fd<0.3){ dx=lf.x; dz=lf.z; }
+      if(L.state==='rag'){ dx=lb.pos.x-b.pos.x; dz=lb.pos.z-b.pos.z; speed=0; }
+    } else if(n.state==='war'){
       let enemy=null,ed=1e9; for(const o of WAR.soldiers){ if(o.side===n.side||o.state!=='war') continue; const d=Math.hypot(o.body.pos.x-b.pos.x,o.body.pos.z-b.pos.z); if(d<ed){ ed=d; enemy=o; } }
       if(enemy&&ed<1.6){ dx=enemy.body.pos.x-b.pos.x; dz=enemy.body.pos.z-b.pos.z; speed=0; }
       else if(enemy){ dx=enemy.body.pos.x-b.pos.x; dz=enemy.body.pos.z-b.pos.z; speed=n.speed; if((b.pos.z-WAR.z)*n.side<2.5) speed=0; }
@@ -1285,8 +1446,7 @@ function updateNPCs(dt){
       b.pos.x+=(dx/fd*speed-dz/fd*sway)*dt; b.pos.z+=(dz/fd*speed+dx/fd*sway)*dt;
       b.pos.x=clamp(b.pos.x,n.home.x-3.2,n.home.x+3.2); b.pos.z=clamp(b.pos.z,n.home.z-3.2,n.home.z+3.2); b.pos.y=(n.home.y||0)+b.half.y;
       b.vel.set(0,0,0); tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt)); continue;
-    }
-    if(n.state==='ball'){
+    } else if(n.state==='ball'){
       const ball=whimsy.ball; n.cool=Math.max(0,n.cool-dt);
       if(ball.held==='npc'){
         n.dribbleT+=dt; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed;
@@ -1311,6 +1471,9 @@ function updateNPCs(dt){
       if(n.fleeT>0){ n.fleeT-=dt; dx=n.flee.x; dz=n.flee.z; speed=3.6; n.state='flee'; }
       else { n.state='walk'; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed; if(Math.hypot(dx,dz)<1){ n.target=randomSidewalkRT(); continue; } }
     }
+    if(n.role==='saitama'){ n.punchT=(n.punchT||0)+dt; if(n.punchT>5){ let v=null,vd=2.4; for(const o of npcs){ if(o===n||o.state==='rag') continue; const od=Math.hypot(o.body.pos.x-b.pos.x,o.body.pos.z-b.pos.z); if(od<vd){ vd=od; v=o; } }
+        if(v){ n.punchT=0; const px=v.body.pos.x-b.pos.x, pz=v.body.pos.z-b.pos.z, pl=Math.hypot(px,pz)||1; ragdollNPC(v,new V3(px/pl*28,14,pz/pl*28).multiplyScalar(v.body.mass),null); whimsy.punchAt=simNow(); whimsy.punchFlash.position.set(b.pos.x+px/pl*0.8,b.pos.y+0.4,b.pos.z+pz/pl*0.8); if(Math.hypot(players[localSlot].pos.x-b.pos.x,players[localSlot].pos.z-b.pos.z)<40) beep(70,0.4,'square',0.07); }
+        for(const P of players){ if(!P.active||P.rag||P.driving) continue; if(Math.hypot(P.pos.x-b.pos.x,P.pos.z-b.pos.z)<1.5&&Math.abs(P.pos.y-b.pos.y)<1.5){ n.punchT=0; const px=P.pos.x-b.pos.x, pz=P.pos.z-b.pos.z, pl=Math.hypot(px,pz)||1; const save=player; player=P; enterRagdoll(new V3(px/pl*26,14,pz/pl*26)); centerMsg('ONE PUNCH','consider the consequences of your actions'); player=save; whimsy.punchAt=simNow(); whimsy.punchFlash.position.set(b.pos.x+px/pl*0.8,b.pos.y+0.4,b.pos.z+pz/pl*0.8); } } } }
     const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
     b.pos.x=clamp(b.pos.x+dx*speed*dt,-128,128); b.pos.z=clamp(b.pos.z+dz*speed*dt,-128,128); b.pos.y=(n.home.y||0)+b.half.y;
     b.vel.set(dx*speed,0,dz*speed);
@@ -1444,6 +1607,9 @@ function updatePlayer(dt,t){
   const hs=Math.hypot(player.vel.x,player.vel.z);
   if(hs>0.6) player.yaw=Math.atan2(player.vel.x,player.vel.z);
   player.an=player.grounded?(hs>0.5?1:0):2;
+  if(whimsy.potties) for(const pt of whimsy.potties){ if(simNow()>(player.cd.potty||0)&&Math.abs(player.pos.y-pt.y)<1.5&&Math.hypot(player.pos.x-pt.x,player.pos.z-pt.z)<0.75){ player.cd.potty=simNow()+2500; player.pos.set(pt.to[0],pt.to[1],pt.to[2]); player.vel.set(0,0,0); if(isLocal()) cam.pos.set(0,0,0); centerMsg(pt.msg,pt.sub); beep(160,0.5,'sawtooth',0.05); break; } }
+  if(player.fishT&&simNow()-player.fishT>3200){ player.fishT=0; const f=FISH[Math.floor(srng()*FISH.length)]; const big=srng()<0.15; trick(big?'MONSTER CATCH':'CAUGHT A '+f,big?200:60); centerMsg(big?'IT\'S HUGE':'CAUGHT A '+f,big?'the lake will remember this':'nice one'); beep(800,0.2,'sine',0.05); }
+  if(player.fishT&&Math.hypot(player.pos.x-whimsy.dockEnd.x,player.pos.z-whimsy.dockEnd.z)>2.5) player.fishT=0;
   // rooftops, club, hot tub
   if(player.grounded&&player.pos.y>9&&simNow()>(player.cd.roof||0)){ player.cd.roof=simNow()+40000; trick('ROOFTOP',150); }
   PARTIES.forEach((P,Pi)=>{ const ins=Math.abs(player.pos.x-P.x)<P.hx&&Math.abs(player.pos.z-P.z)<P.hz&&player.pos.y>P.y0&&player.pos.y<P.y1;
@@ -1546,14 +1712,14 @@ function captureInput(){
 const INIT={bodies:bodies.map(b=>({pos:b.pos.clone(),quat:b.quat.clone(),asleep:b.asleep,kin:b.kinematic})),npcs:npcs.map(n=>({state:n.state,target:n.target?Object.assign({},n.target):null,speed:n.speed,walkPhase:n.walkPhase})),cannons:WAR.cannons.map(c=>c.t),pigeons:whimsy.pigeons.map(p=>({hx:p.hx,hz:p.hz}))};
 function resetWorld(){
   bodies.forEach((b,i)=>{ const o=INIT.bodies[i]; b.pos.copy(o.pos); b.quat.copy(o.quat); b.pPos.copy(o.pos); b.pQuat.copy(o.quat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.asleep=o.asleep; b.sleep=0; b.held=null; b.driver=null; b.kinematic=o.kin; b.lastHitBy=null; b.lastHitT=0; b.broken=false; b.mesh.visible=true; });
-  npcs.forEach((n,i)=>{ const o=INIT.npcs[i]; n.state=o.state; n.target=o.target?Object.assign({},o.target):null; n.speed=o.speed; n.fleeT=0; n.ragT=0; n.spookCd=0; n.cool=0; n.dribbleT=0; n.hasBall=false; n.walkPhase=o.walkPhase; });
+  npcs.forEach((n,i)=>{ const o=INIT.npcs[i]; n.state=o.state; n.punchT=0; n.target=o.target?Object.assign({},o.target):null; n.speed=o.speed; n.fleeT=0; n.ragT=0; n.spookCd=0; n.cool=0; n.dribbleT=0; n.hasBall=false; n.walkPhase=o.walkPhase; });
   WAR.cannons.forEach((c,i)=>{ c.t=INIT.cannons[i]; c.flash.material.opacity=0; }); WAR.shotT=0;
   whimsy.pigeons.forEach((p,i)=>{ p.fly=0; p.vx=0; p.vz=0; p.g.position.set(INIT.pigeons[i].hx,0.14,INIT.pigeons[i].hz); });
   whimsy.ghost.ang=0; if(whimsy.golden){ whimsy.goldenTaken=false; whimsy.golden.visible=true; }
   for(const a of acorns){ a.taken=0; a.mesh.visible=true; }
   for(const t of trees) t.scoredAt=-1e9;
   PLANE.flightTick=0;
-  for(const P of players){ resetPlayerState(P); P.pPos.copy(P.pos); }
+  for(const P of players){ resetPlayerState(P); P.pPos.copy(P.pos); P.fishT=0; }
   srng=mulberry32(777); simTick=0; Lock.trace=[];
   Lock.localInputs.clear(); Lock.remoteInputs.clear(); Lock.hashes.clear(); Lock.remoteAck=-1; Lock.remoteMaxTick=-1; Lock.stalls=0; Lock.desync=false; Lock.fixRot=0;
   player=players[localSlot]; if(isLocal()) cam.pos.set(0,0,0);
@@ -1743,6 +1909,13 @@ function updateClub(dt,t){
   if(whimsy.alienCore){ whimsy.alienCore.scale.setScalar(1+pulse*0.4); }
   if(whimsy.leds) whimsy.leds.forEach((l,i)=>l.material.color.setHex((beat+i)%3===0?0xff3621:0x3dff7a));
   if(whimsy.quotes){ const q=Math.floor(t/3.5)%whimsy.quotes.length; whimsy.quotes.forEach((m,i)=>m.visible=i===q); }
+  if(whimsy.kevinQuotes){ const q=Math.floor(t/4)%whimsy.kevinQuotes.length; whimsy.kevinQuotes.forEach((m,i)=>m.visible=i===q); }
+  if(whimsy.neon) for(const n of whimsy.neon){ const on=Math.sin(t*6+n.ph)>-0.6&&!(Math.floor(t*2+n.ph)%17===0); n.on.visible=on; n.off.visible=!on; n.arrow.position.y=4.4+Math.sin(t*3+n.ph)*0.25; }
+  if(whimsy.weddingHeart){ whimsy.weddingHeart.rotation.y=t*1.2; whimsy.weddingHeart.position.y=38+Math.sin(t*2)*0.8; }
+  if(whimsy.sparkles&&whimsy.ricky){ const rp=whimsy.ricky.body.pos; whimsy.sparkles.forEach((sp,i)=>{ const a=t*2.5+i*1.05; sp.position.set(rp.x+Math.cos(a)*0.7,rp.y+0.2+Math.sin(a*1.7+i)*0.6,rp.z+Math.sin(a)*0.7); sp.scale.setScalar(0.6+0.6*Math.abs(Math.sin(t*5+i))); }); }
+  if(whimsy.crows) whimsy.crows.forEach(c=>{ const a=t*0.5+c.ph; c.g.position.set(whimsy.ominous.x+Math.cos(a)*c.r,c.h+Math.sin(t*1.3+c.ph)*0.8,whimsy.ominous.z+Math.sin(a)*c.r); c.g.rotation.y=-a; c.g.children[1].rotation.z=Math.sin(t*9+c.ph)*0.6; c.g.children[2].rotation.z=-Math.sin(t*9+c.ph)*0.6; });
+  if(whimsy.ominous){ const od=Math.hypot(players[localSlot].pos.x-whimsy.ominous.x,players[localSlot].pos.z-whimsy.ominous.z); if(od<24&&Math.floor(t)%4===0&&t%1<0.02) beep(42,1.8,'sawtooth',0.035*(1-od/24)); }
+  if(whimsy.punchFlash){ const age=(simNow()-(whimsy.punchAt||-1e9))/1000; const f=whimsy.punchFlash; if(age<0.35){ f.material.opacity=0.8*(1-age/0.35); f.scale.setScalar(1+age*9); } else f.material.opacity=0; }
 }
 function updateWhimsy(dt,t){ // world-side effects (deterministic), plus purely visual motion
   const W=whimsy, st=simNow()/1000;
