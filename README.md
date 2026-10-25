@@ -1,4 +1,4 @@
-# Squirrel Simulator
+# Squirrel Game
 
 A Goat Simulator-style 3D sandbox where you play a squirrel, with two-player online co-op over a direct peer-to-peer connection.
 
