@@ -604,6 +604,26 @@ function collidePlayerTrees(move,dt){
     }
   }
 }
+function collidePlayerRemotes(){
+  const R=1.0, now=performance.now();
+  for(const r of Net.remotes.values()){
+    if(!r.st||!Array.isArray(r.st.p)) continue;
+    if(Math.abs(player.pos.y-r.pos.y)>0.9) continue;
+    const dx=player.pos.x-r.pos.x, dz=player.pos.z-r.pos.z, d=Math.hypot(dx,dz);
+    if(d>=1.6||d<1e-4) continue;
+    const nx=dx/d, nz=dz/d, rv=r.vel;
+    const vn=(player.vel.x-rv.x)*nx+(player.vel.z-rv.z)*nz; // closing speed (negative = approaching)
+    if(vn<-6&&now-(r.lastSlam||0)>1500){
+      const mySp=Math.hypot(player.vel.x,player.vel.z), theirSp=Math.hypot(rv.x,rv.z);
+      if(theirSp>mySp+1.5){ r.lastSlam=now; enterRagdoll(new V3(rv.x*1.2,6,rv.z*1.2)); centerMsg('SLAMMED','by '+String(r.st.nm||'a squirrel').slice(0,14)); return; }
+      if(mySp>theirSp+1.5){ r.lastSlam=now; trick('SQUIRREL SLAM',30); }
+    }
+    if(d<R){
+      player.pos.x+=nx*(R-d)*0.6; player.pos.z+=nz*(R-d)*0.6;
+      if(vn<0){ player.vel.x-=nx*vn*1.4; player.vel.z-=nz*vn*1.4; }
+    }
+  }
+}
 function centerMsg(txt,sub){ const el=$('centerMsg'); el.hidden=false; el.textContent=txt; if(sub){ const s=document.createElement('small'); s.textContent=sub; el.appendChild(s);} clearTimeout(centerMsg.t); centerMsg.t=setTimeout(()=>el.hidden=true,1600); }
 
 function updatePlayer(dt,t){
@@ -644,7 +664,7 @@ function updatePlayer(dt,t){
   const wasGrounded=player.grounded; player.grounded=false;
   if(player.pos.y<=0){ player.pos.y=0; if(player.vel.y<0) player.vel.y=0; player.grounded=true; }
   for(const p of pads){ const dx=player.pos.x-p.x, dz=player.pos.z-p.z; if(dx*dx+dz*dz<p.r*p.r){ if(player.pos.y<=p.y){ player.pos.y=p.y; if(player.vel.y<-2){ player.vel.y=Math.max(17,-player.vel.y*1.15); player.jumps=1; player.spinV=10; trick('BOING',15); beep(200,0.25,'sine',0.06); } else { if(player.vel.y<0) player.vel.y=0; player.grounded=true; } } } }
-  collidePlayerStatics(); collidePlayerBodies(dt); if(player.rag) return; collidePlayerTrees(move,dt); if(player.climbing) return;
+  collidePlayerStatics(); collidePlayerBodies(dt); if(player.rag) return; collidePlayerRemotes(); if(player.rag) return; collidePlayerTrees(move,dt); if(player.climbing) return;
   player.pos.x=clamp(player.pos.x,-WORLD,WORLD); player.pos.z=clamp(player.pos.z,-WORLD,WORLD);
   if(player.grounded){ if(!wasGrounded&&player.air>1.1) trick('AIR TIME',Math.floor(player.air*25)); player.air=0; player.jumps=0; player.coyote=0.12; player.spin=0; player.spinV=0; }
   else { player.coyote-=dt; player.air+=dt; }
@@ -711,7 +731,7 @@ function refreshMenu(){
   else note.innerHTML='<b>Online play unavailable:</b> the networking library did not load. Solo play still works.';
   renderGames();
 }
-function ensureRemote(id){ let r=Net.remotes.get(id); if(!r){ r={id,st:null,t:0,lastSeq:0,mesh:null,color:-1,pos:new V3(),yaw:0,heldIdx:-1,spin:0}; Net.remotes.set(id,r); } return r; }
+function ensureRemote(id){ let r=Net.remotes.get(id); if(!r){ r={id,st:null,t:0,lastSeq:0,mesh:null,color:-1,pos:new V3(),yaw:0,heldIdx:-1,spin:0,vel:new V3(),lastP:null,lastT:0,lastSlam:0}; Net.remotes.set(id,r); } return r; }
 function removeRemote(id){ const r=Net.remotes.get(id); if(!r) return; if(r.mesh) scene.remove(r.mesh.holder); for(const b of bodies) if(b.held===id) b.held=null; Net.remotes.delete(id); }
 function wireNamed(named){
   Net.named=named;
@@ -817,6 +837,7 @@ function updateRemotes(dt,t){
     const ci=clamp(st.c|0,0,FURS.length-1);
     if(!r.mesh||r.color!==ci){ if(r.mesh) scene.remove(r.mesh.holder); r.mesh=makeSquirrel(FURS[ci].c); r.color=ci; scene.add(r.mesh.holder); r.pos.set(+st.p[0],+st.p[1],+st.p[2]); }
     tv.set(+st.p[0]||0,+st.p[1]||0,+st.p[2]||0);
+    if(r.t!==r.lastT){ if(r.lastP){ const span=Math.max(0.02,(r.t-r.lastT)/1000); if(span<1){ r.vel.set((tv.x-r.lastP.x)/span,0,(tv.z-r.lastP.z)/span); if(r.vel.length()>14) r.vel.setLength(14); } else r.vel.set(0,0,0); } r.lastP=r.lastP||new V3(); r.lastP.copy(tv); r.lastT=r.t; }
     const sp=tv.distanceTo(r.pos)/Math.max(dt,0.001);
     r.pos.lerp(tv,Math.min(1,14*dt));
     const ry=+st.ry||0; let dy=ry-r.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); r.yaw+=dy*Math.min(1,14*dt);
