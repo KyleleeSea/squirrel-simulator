@@ -187,6 +187,15 @@ sun.castShadow=true; sun.shadow.mapSize.set(1536,1536);
 const sc=sun.shadow.camera; sc.left=-40; sc.right=40; sc.top=40; sc.bottom=-40; sc.near=1; sc.far=160; sun.shadow.bias=-0.0008;
 scene.add(sun); scene.add(sun.target);
 
+const VLIGHTS=[]; // every point light in the city is virtual; six real lights are assigned to the nearest ones each frame
+function vlight(color,intensity,distance,decay){ const o=new THREE.Object3D(); o.color=new THREE.Color(color); o.intensity=intensity; o.distance=distance||20; o.decay=decay==null?2:decay; VLIGHTS.push(o); return o; }
+const LPOOL=[]; for(let i=0;i<6;i++){ const pl=new THREE.PointLight(0xffffff,0,1,2); scene.add(pl); LPOOL.push(pl); }
+const _lwp=new V3();
+function updateLightPool(center){
+  for(const v of VLIGHTS){ v.getWorldPosition(_lwp); v._d=_lwp.distanceTo(center); v._wx=_lwp.x; v._wy=_lwp.y; v._wz=_lwp.z; }
+  VLIGHTS.sort((a,b)=>a._d-b._d);
+  for(let i=0;i<LPOOL.length;i++){ const pl=LPOOL[i], v=VLIGHTS[i]; if(!v||v._d>70||v.intensity<=0){ pl.intensity=0; continue; } pl.position.set(v._wx,v._wy,v._wz); pl.color.copy(v.color); pl.distance=v.distance; pl.decay=v.decay; pl.intensity=v.intensity*clamp(1-(v._d-45)/25,0,1); }
+}
 const matCache=new Map();
 function mat(c){ if(!matCache.has(c)) matCache.set(c,new THREE.MeshToonMaterial({color:c})); return matCache.get(c); }
 function box(w,h,d,c){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c)); m.castShadow=true; m.receiveShadow=true; return m; }
@@ -282,7 +291,7 @@ class Body{
     this.pos=new V3(); this.vel=new V3(); this.quat=new Q(); this.angVel=new V3();
     this.radius=this.half.length(); this.sleep=0; this.asleep=false; this.held=null; this.kinematic=false;
     this.mesh=o.mesh; this.e=o.e==null?0.25:o.e; this.mu=o.mu==null?0.6:o.mu;
-    this.tPos=new V3(); this.tQuat=new Q(); this.lastHitBy=null; this.npc=null; this.label=o.label||o.kind; this.lastTrickT=0;
+    this.pPos=new V3(); this.pQuat=new Q(); this.lastHitBy=null; this.npc=null; this.label=o.label||o.kind; this.lastTrickT=0;
   }
   wake(){ this.asleep=false; this.sleep=0; }
   applyImpulse(imp,point){
@@ -294,7 +303,7 @@ class Body{
 const bodies=[];
 function addBody(kind,half,mass,x,z,yaw,mesh,opts){
   const b=new Body(Object.assign({idx:bodies.length,kind,half,mass,mesh},opts||{}));
-  b.pos.set(x,(opts&&opts.y!=null?opts.y:0)+half.y,z); b.quat.setFromAxisAngle(UP,yaw); b.tPos.copy(b.pos); b.tQuat.copy(b.quat);
+  b.pos.set(x,(opts&&opts.y!=null?opts.y:0)+half.y,z); b.quat.setFromAxisAngle(UP,yaw); b.pPos.copy(b.pos); b.pQuat.copy(b.quat);
   mesh.position.copy(b.pos); mesh.quaternion.copy(b.quat); scene.add(mesh); bodies.push(b);
   if(b.radius<0.6) mesh.traverse(m=>{ if(m.isMesh) m.castShadow=false; });
   return b;
@@ -434,8 +443,8 @@ function clubInterior(g,o){
   const shelf=box(6,2.6,0.3,0x2a1d2e); shelf.position.set(-8.3,1.3,8.6); g.add(shelf);
   CLUB.ball=new THREE.Mesh(new THREE.SphereGeometry(0.6,16,12),new THREE.MeshStandardMaterial({color:0xffffff,metalness:1,roughness:0.15,flatShading:true})); CLUB.ball.position.set(0,5.9,-1); g.add(CLUB.ball);
   const chain=cyl(0.03,0.03,0.6,0x888,6); chain.position.set(0,6.7,-1); g.add(chain);
-  for(const [x,z,c] of [[-7,-3,0xff2d95],[7,-3,0x2de2ff],[0,4,0xb14cff]]){ const l=new THREE.PointLight(c,2,26,2); l.position.set(x,5.4,z); g.add(l); CLUB.lights.push(l); }
-  CLUB.strobe=new THREE.PointLight(0xffffff,0,30,2); CLUB.strobe.position.set(0,6,-1); g.add(CLUB.strobe);
+  for(const [x,z,c] of [[-7,-3,0xff2d95],[7,-3,0x2de2ff],[0,4,0xb14cff]]){ const l=vlight(c,2,26,2); l.position.set(x,5.4,z); g.add(l); CLUB.lights.push(l); }
+  CLUB.strobe=vlight(0xffffff,0,30,2); CLUB.strobe.position.set(0,6,-1); g.add(CLUB.strobe);
   CLUB.beams=new THREE.Group(); CLUB.beams.position.set(0,6.6,-1);
   for(let k=0;k<4;k++){ const cone=new THREE.Mesh(new THREE.ConeGeometry(1.1,8,12,1,true),new THREE.MeshBasicMaterial({color:palette[k],transparent:true,opacity:0.16,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); cone.position.y=-4; cone.rotation.x=Math.PI; const piv=new THREE.Group(); piv.rotation.z=0.5; piv.rotation.y=k*Math.PI/2; piv.add(cone); CLUB.beams.add(piv); }
   g.add(CLUB.beams);
@@ -704,7 +713,7 @@ function updatePlane(dt){
     for(const r of PLANE.riders){ const b=r.n.body; if(r.n.state==='idle'){ b.pos.set(nx+r.x,ny+r.y+b.half.y,nz+r.z); } }
   }
   PLANE.yaw=pose?pose.yaw:0; PLANE.pitch=pose?pose.pitch:0;
-  PLANE.group.position.set(PLANE.x,PLANE.y,PLANE.z); PLANE.group.rotation.set(0,0,0);
+  PLANE.group.rotation.set(0,0,0);
   if(PLANE.flightTick>0){ PLANE.group.rotation.y=PLANE.yaw; PLANE.group.rotation.x=PLANE.pitch; }
 }
 function tryFly(){
@@ -717,7 +726,7 @@ function tryFly(){
 // ---------------- parties, campuses, companies, the mothership ----------------
 function makeParty(o){ const p=Object.assign({tiles:[],lights:[],strobe:null,beams:null,ball:null,inside:false,enteredAt:-1e9,vibeT:0,pal:CLUBPAL},o); PARTIES.push(p); return p; }
 function danceTiles(g,cx,cz,cols,rows,size,pal,y){ const out=[]; for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){ const m=new THREE.Mesh(new THREE.PlaneGeometry(size-0.1,size-0.1),new THREE.MeshBasicMaterial({color:pal[(i+j)%pal.length]})); m.rotation.x=-Math.PI/2; m.position.set(cx-(cols-1)*size/2+i*size,y||0.04,cz-(rows-1)*size/2+j*size); g.add(m); out.push({m,i,j}); } return out; }
-function partyLights(g,spots,colors,y){ return spots.map(([x,z],i)=>{ const l=new THREE.PointLight(colors[i%colors.length],2,24,2); l.position.set(x,y,z); g.add(l); return l; }); }
+function partyLights(g,spots,colors,y){ return spots.map(([x,z],i)=>{ const l=vlight(colors[i%colors.length],2,24,2); l.position.set(x,y,z); g.add(l); return l; }); }
 function makeAlien(i){ const g=makeHumanStyled(0x7fe36a,0xc0c8d0,0xc0c8d0,0x7fe36a); for(const x of [-0.08,0.08]){ const e=sphere(0.065,0x0a0a12,8,6); e.scale.set(1,1.7,0.6); e.position.set(x,0.7,0.15); g.add(e); } const ant=cyl(0.015,0.015,0.3,0x7fe36a,5); ant.position.set(0,1.0,0); g.add(ant); const tip=sphere(0.04,0xff2d95,6,4); tip.position.set(0,1.16,0); g.add(tip); return g; }
 
 // frat house: Sigma Nu Tau
@@ -726,7 +735,7 @@ function fratInterior(g,o){
   const couch=box(2.2,0.7,0.9,0x6b2d3a); couch.position.set(-3.8,0.35,2.5); g.add(couch); addStatic(o.x-3.8,0.35,o.z+2.5,1.1,0.35,0.45);
   const tv=box(1.6,0.9,0.1,0x111); tv.position.set(-3.8,1.6,-3.8); g.add(tv); const screen=signPlane('BIG GAME',1.5,'#9fd356','#111111'); screen.position.set(-3.8,1.6,-3.73); g.add(screen);
   const banner=signPlane('ΣΝΤ  RUSH WEEK',6,'#ffffff','#8a1c2b'); banner.position.set(0,3.2,-4.1); g.add(banner);
-  const l=partyLights(g,[[-3,-2],[3,2]],[0xff2d95,0x3dff7a],3.6); const strobe=new THREE.PointLight(0xffffff,0,20,2); strobe.position.set(0,3.8,0); g.add(strobe);
+  const l=partyLights(g,[[-3,-2],[3,2]],[0xff2d95,0x3dff7a],3.6); const strobe=vlight(0xffffff,0,20,2); strobe.position.set(0,3.8,0); g.add(strobe);
   makeParty({name:'PARTY CRASHER',pts:50,x:o.x,z:o.z,hx:o.w/2,hz:o.d/2,y0:-1,y1:o.h,lights:l,strobe,tiles:[],pal:[0xff2d95,0x3dff7a,0xfff23d]});
 }
 makeBuilding({x:-62,z:-12,w:12,d:9,h:6,color:0xe8d9b5,floor:0x8a6a4a,roof:'pitched',roofColor:0x5b6b7a,door:'+z',sign:'ΣΝΤ',signColor:'#ffffff',signBg:'#8a1c2b',interior:fratInterior,name:'frat house',doorColor:0x8a1c2b});
@@ -779,7 +788,7 @@ const ALIEN={x:-20,y:70,z:-20};
   const g=new THREE.Group(); scene.add(g);
   const tiles=danceTiles(g,A.x,A.z,7,7,1.5,[0x3dff7a,0xb14cff,0x2de2ff,0xff2d95],A.y+0.03);
   const lights=partyLights(g,[[A.x-6,A.z-6],[A.x+6,A.z-6],[A.x,A.z+6]],[0x3dff7a,0xb14cff,0x2de2ff],A.y+4.5);
-  const strobe=new THREE.PointLight(0xffffff,0,30,2); strobe.position.set(A.x,A.y+5,A.z); g.add(strobe);
+  const strobe=vlight(0xffffff,0,30,2); strobe.position.set(A.x,A.y+5,A.z); g.add(strobe);
   const core=new THREE.Mesh(new THREE.SphereGeometry(1.2,16,12),new THREE.MeshBasicMaterial({color:0x6aff7a,transparent:true,opacity:0.6})); core.position.set(A.x,A.y+6,A.z); scene.add(core); whimsy.alienCore=core;
   const booth=box(4,1,1,0x2a1d4a); booth.position.set(A.x,A.y+0.5,A.z-7); scene.add(booth); addStatic(A.x,A.y+0.5,A.z-7,2,0.5,0.5);
   const neon=signPlane('ZORP\'S MOTHERSHIP RAVE',8,'#3dff7a','#1a1030'); neon.position.set(A.x,A.y+3.6,A.z-9.5); scene.add(neon);
@@ -821,7 +830,7 @@ function cryptInterior(g,o){
   const v=makeHumanStyled(0xe8e8f0,0x111111,0x111111,0x111111); const cape=box(0.7,1.2,0.08,0x6b0f1f); cape.position.set(0,0.05,-0.22); v.add(cape); nameplate(v,'COUNT NUTULA','#ffffff','#6b0f1f');
   addNPC(o.x,o.z-1,0,'idle','vampire',160,0,v);
   addBody('coffin',new V3(0.4,0.3,0.95),6,o.x+1.4,o.z,0,(()=>{ const gg=new THREE.Group(); const c=box(0.8,0.6,1.9,0x3a2a1a); gg.add(c); const lid=box(0.7,0.08,1.7,0x6b0f1f); lid.position.y=0.34; gg.add(lid); return gg; })(),{label:'coffin'});
-  const candle=new THREE.PointLight(0xff8a2a,1.2,8,2); candle.position.set(0,2,0); g.add(candle);
+  const candle=vlight(0xff8a2a,1.2,8,2); candle.position.set(0,2,0); g.add(candle);
 }
 function terminalInterior(g,o){
   for(const x of [-4,4]){ const d=box(4,1.1,1,0x9aa3ad); d.position.set(x,0.55,-1); g.add(d); addStatic(o.x+x,0.55,o.z-1,2,0.55,0.5); addNPC(o.x+x,o.z-2.2,0,'idle','gate agent',170,0); }
@@ -845,7 +854,7 @@ function churchInterior(g,o){
   const cv=box(0.3,5,0.3,wood); cv.position.set(0,5.5,14.4); g.add(cv); const ch=box(2.4,0.3,0.3,wood); ch.position.set(0,6.8,14.4); g.add(ch);
   for(const x of [-11.6,11.6]) for(let z=-10;z<=10;z+=5){ const w=stainedGlass(2.2,6); w.position.set(x,9,z); w.rotation.y=x<0?Math.PI/2:-Math.PI/2; g.add(w); const w2=stainedGlass(2.2,6); w2.position.set(x*1.04,9,z); w2.rotation.y=x<0?Math.PI/2:-Math.PI/2; g.add(w2); }
   const rose=roseWindow(3); rose.position.set(0,13.5,-14.6); g.add(rose); const rose2=roseWindow(3); rose2.position.set(0,13.5,-15.3); g.add(rose2);
-  for(const [x,z] of [[-4,-6],[4,-6],[-4,4],[4,4],[0,11]]){ const l=new THREE.PointLight(0xffd9a0,1.2,22,2); l.position.set(x,7,z); g.add(l); const ch2=cyl(0.5,0.9,0.4,0xb8862a,8); ch2.position.set(x,6.5,z); g.add(ch2); const chain=cyl(0.02,0.02,h-6.7,0x8a8f9a,4); chain.position.set(x,h-(h-6.7)/2,z); g.add(chain); }
+  for(const [x,z] of [[-4,-6],[4,-6],[-4,4],[4,4],[0,11]]){ const l=vlight(0xffd9a0,1.2,22,2); l.position.set(x,7,z); g.add(l); const ch2=cyl(0.5,0.9,0.4,0xb8862a,8); ch2.position.set(x,6.5,z); g.add(ch2); const chain=cyl(0.02,0.02,h-6.7,0x8a8f9a,4); chain.position.set(x,h-(h-6.7)/2,z); g.add(chain); }
   for(let i=0;i<6;i++){ const c=cyl(0.05,0.05,0.5,0xfff4d6,6); c.position.set(-2.5+i,1.45,11.4); g.add(c); const fl=sphere(0.07,0xffb347,5,4); fl.position.set(-2.5+i,1.76,11.4); g.add(fl); }
   // choir loft over the entrance: a mezzanine with an organ, reached by stairs along the east wall
   const loft=box(24,0.4,8,0xcfc8b8); loft.position.set(0,6,-11); g.add(loft); addStatic(o.x,6,o.z-11,12,0.2,4);
@@ -931,7 +940,7 @@ function makeConcert(){
   const beam=box(28,0.5,0.5,0x3a3a40); beam.position.set(C.x,13.5,C.z+3.5); scene.add(beam);
   const g=new THREE.Group(); scene.add(g);
   const lights=partyLights(g,[[C.x-9,C.z+5],[C.x,C.z+5],[C.x+9,C.z+5]],[0xff2d95,0xffffff,0x2de2ff],12);
-  const strobe=new THREE.PointLight(0xffffff,0,40,2); strobe.position.set(C.x,13,C.z+6); g.add(strobe);
+  const strobe=vlight(0xffffff,0,40,2); strobe.position.set(C.x,13,C.z+6); g.add(strobe);
   const beams=new THREE.Group(); beams.position.set(C.x,13.3,C.z+3.5);
   for(let k=0;k<6;k++){ const cone=new THREE.Mesh(new THREE.ConeGeometry(1.4,14,12,1,true),new THREE.MeshBasicMaterial({color:[0xff2d95,0x2de2ff,0xffffff,0xb14cff,0xfff23d,0x3dff7a][k],transparent:true,opacity:0.14,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); cone.position.y=-7; cone.rotation.x=Math.PI; const piv=new THREE.Group(); piv.position.x=-10+k*4; piv.rotation.z=0.4*(k%2?1:-1); piv.add(cone); beams.add(piv); }
   g.add(beams);
@@ -1103,7 +1112,7 @@ function beep(f,d,type,vol){ if(!isLocal()) return; try{ ensureAudio(); if(!ac) 
 // ---------------- player ----------------
 // Every squirrel is simulated identically on every machine (lockstep). The gameplay code below is written against
 // a single `player`/`keys` pair; the simulation swaps those in per player each tick.
-function newPlayer(slot){ return {slot,active:slot===0,pos:new V3(slot?-7:-11,0,-17),vel:new V3(),yaw:0,grounded:false,coyote:0,jumps:0,air:0,climbing:null,climbAng:0,rag:null,ragT:0,held:null,driving:null,carSpeed:0,carYaw:0,score:0,combo:0,lastTrick:-1e9,an:0,spin:0,spinV:0,sprint:false,name:slot?'Friend':'Nutsy',color:slot?1:0,mesh:null,headbuttT:0,cd:{},pin:[],pent:[],vibe:[],zcd:[],aboard:false,tubT:0,boardCd:-1e9,flownCd:-1e9}; }
+function newPlayer(slot){ return {slot,active:slot===0,pos:new V3(slot?-7:-11,0,-17),pPos:new V3(slot?-7:-11,0,-17),vel:new V3(),yaw:0,grounded:false,coyote:0,jumps:0,air:0,climbing:null,climbAng:0,rag:null,ragT:0,held:null,driving:null,carSpeed:0,carYaw:0,score:0,combo:0,lastTrick:-1e9,an:0,spin:0,spinV:0,sprint:false,name:slot?'Friend':'Nutsy',color:slot?1:0,mesh:null,headbuttT:0,cd:{},pin:[],pent:[],vibe:[],zcd:[],aboard:false,tubT:0,boardCd:-1e9,flownCd:-1e9}; }
 function resetPlayerState(P){ const keep={name:P.name,color:P.color,mesh:P.mesh,active:P.active}; const f=newPlayer(P.slot); for(const k in f) P[k]=f[k]; Object.assign(P,keep); }
 const players=[newPlayer(0),newPlayer(1)];
 let localSlot=0; let player=players[0];
@@ -1466,14 +1475,15 @@ function camOcclude(from,to){
   return best;
 }
 function updateCamera(dt){
-  const target=tv.copy(players[localSlot].pos); target.y+=0.9;
+  const target=tv.copy(viewPos(players[localSlot])); target.y+=0.9;
   const cp=Math.cos(cam.pitch);
   tv2.set(Math.sin(cam.yaw)*cp,Math.sin(cam.pitch),Math.cos(cam.yaw)*cp).multiplyScalar(cam.dist).add(target);
   const occ=camOcclude(target,tv2); if(occ<1){ tv2.sub(target).multiplyScalar(Math.max(0.18,occ)).add(target); }
   if(tv2.y<0.35) tv2.y=0.35;
-  if(cam.pos.lengthSq()===0) cam.pos.copy(tv2); else cam.pos.lerp(tv2,Math.min(1,12*dt));
+  if(cam.pos.lengthSq()===0) cam.pos.copy(tv2); else cam.pos.lerp(tv2,1-Math.exp(-14*dt));
   camera.position.copy(cam.pos); camera.lookAt(target);
-  const LP=players[localSlot]; const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); sun.position.set(LP.pos.x+40*(1-el)+15,12+el*70,LP.pos.z+22); sun.target.position.set(LP.pos.x,0,LP.pos.z); sun.target.updateMatrixWorld();
+  const LP=players[localSlot]; const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); const sx=Math.round(LP.pos.x/2)*2, sz=Math.round(LP.pos.z/2)*2; sun.position.set(sx+40*(1-el)+15,12+el*70,sz+22); sun.target.position.set(sx,0,sz); sun.target.updateMatrixWorld();
+  updateLightPool(cam.pos);
 }
 
 // ---------------- networking ----------------
@@ -1531,7 +1541,7 @@ function captureInput(){
 // the world as it was built, so both machines can restart from the same tick 0
 const INIT={bodies:bodies.map(b=>({pos:b.pos.clone(),quat:b.quat.clone(),asleep:b.asleep,kin:b.kinematic})),npcs:npcs.map(n=>({state:n.state,target:n.target?Object.assign({},n.target):null,speed:n.speed,walkPhase:n.walkPhase})),cannons:WAR.cannons.map(c=>c.t),pigeons:whimsy.pigeons.map(p=>({hx:p.hx,hz:p.hz}))};
 function resetWorld(){
-  bodies.forEach((b,i)=>{ const o=INIT.bodies[i]; b.pos.copy(o.pos); b.quat.copy(o.quat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.asleep=o.asleep; b.sleep=0; b.held=null; b.driver=null; b.kinematic=o.kin; b.lastHitBy=null; b.lastHitT=0; b.broken=false; b.mesh.visible=true; });
+  bodies.forEach((b,i)=>{ const o=INIT.bodies[i]; b.pos.copy(o.pos); b.quat.copy(o.quat); b.pPos.copy(o.pos); b.pQuat.copy(o.quat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.asleep=o.asleep; b.sleep=0; b.held=null; b.driver=null; b.kinematic=o.kin; b.lastHitBy=null; b.lastHitT=0; b.broken=false; b.mesh.visible=true; });
   npcs.forEach((n,i)=>{ const o=INIT.npcs[i]; n.state=o.state; n.target=o.target?Object.assign({},o.target):null; n.speed=o.speed; n.fleeT=0; n.ragT=0; n.spookCd=0; n.cool=0; n.dribbleT=0; n.hasBall=false; n.walkPhase=o.walkPhase; });
   WAR.cannons.forEach((c,i)=>{ c.t=INIT.cannons[i]; c.flash.material.opacity=0; }); WAR.shotT=0;
   whimsy.pigeons.forEach((p,i)=>{ p.fly=0; p.vx=0; p.vz=0; p.g.position.set(INIT.pigeons[i].hx,0.14,INIT.pigeons[i].hz); });
@@ -1539,7 +1549,7 @@ function resetWorld(){
   for(const a of acorns){ a.taken=0; a.mesh.visible=true; }
   for(const t of trees) t.scoredAt=-1e9;
   PLANE.flightTick=0;
-  for(const P of players) resetPlayerState(P);
+  for(const P of players){ resetPlayerState(P); P.pPos.copy(P.pos); }
   srng=mulberry32(777); simTick=0; Lock.trace=[];
   Lock.localInputs.clear(); Lock.remoteInputs.clear(); Lock.hashes.clear(); Lock.remoteAck=-1; Lock.remoteMaxTick=-1; Lock.stalls=0; Lock.desync=false; Lock.fixRot=0;
   player=players[localSlot]; if(isLocal()) cam.pos.set(0,0,0);
@@ -1547,6 +1557,9 @@ function resetWorld(){
 function worldHash(){ let h=0; for(const b of bodies){ h=(h+Math.round(b.pos.x*10)*31+Math.round(b.pos.y*10)*17+Math.round(b.pos.z*10)*7)|0; } for(const P of players){ if(P.active) h=(h+Math.round(P.pos.x*10)*13+Math.round(P.pos.z*10)*5)|0; } return h; }
 function simStep(){
   const t=simNow()/1000;
+  for(const b of bodies){ if(!b.asleep){ b.pPos.copy(b.pos); b.pQuat.copy(b.quat); } }
+  for(const P of players){ if(P.active) P.pPos.copy(P.pos); }
+  PLANE.pX=PLANE.x; PLANE.pY=PLANE.y; PLANE.pZ=PLANE.z;
   for(const P of players){ if(!P.active) continue; player=P; const inp=(P.slot===localSlot?Lock.localInputs.get(simTick):Lock.remoteInputs.get(simTick))||EMPTY_INP; updatePlayerStep(TICK,inp); }
   player=players[localSlot]; keys={};
   for(const b of bodies) stepBody(b,TICK);
@@ -1669,7 +1682,7 @@ function leaveNet(){
 function renderSquirrel(P,dt,t){
   if(!P.mesh) setPlayerMesh(P,P.color);
   const m=P.mesh, h=m.holder; h.visible=P.active; if(!P.active) return;
-  h.position.copy(P.pos); h.position.y+=P.driving?1.45:0.4;
+  h.position.copy(viewPos(P)); h.position.y+=P.driving?1.45:0.4;
   if(P.rag){ h.quaternion.copy(P.rag.quat); }
   else if(P.climbing){ tq.setFromAxisAngle(UP,P.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,16*dt)); }
   else { tq.setFromAxisAngle(UP,P.yaw); if(P.headbuttT>0){ tq2.setFromAxisAngle(new V3(1,0,0),Math.sin(P.headbuttT/0.25*Math.PI)*0.9); tq.multiply(tq2); } h.quaternion.slerp(tq,Math.min(1,16*dt)); }
@@ -1818,7 +1831,8 @@ $('codeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') joinGame($('code
 $('nameIn').addEventListener('change',()=>{ readName(); if(Net.room) Net.room.presence({nick:players[localSlot].name}).catch(()=>{}); });
 
 // ---------------- main loop: fixed 60 Hz simulation, rendering in between ----------------
-let last=performance.now(), t0=last, acc=0;
+let last=performance.now(), t0=last, acc=0, renderAlpha=1;
+const rpos=new V3(); function viewPos(P){ return rpos.lerpVectors(P.pPos,P.pos,renderAlpha); }
 function resize(){ const w=canvas.clientWidth, h=canvas.clientHeight; if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
 function canStep(){ if(Net.mode!=='online'||!Lock.started) return true; return Lock.remoteInputs.has(simTick); }
 function advance(realDt){
@@ -1839,11 +1853,13 @@ function frame(now){
   advance(dt);
   netFrame(now);
   player=players[localSlot];
+  const alpha=clamp(acc/TICK,0,1); renderAlpha=alpha;
   updateDayNight(); updateClub(dt,t);
-  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=npcMode(b.npc); const sp=b.vel.length(); animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===9) breakdancePose(b,t); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
+  for(const b of bodies){ if(b.asleep){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); } else { b.mesh.position.lerpVectors(b.pPos,b.pos,alpha); b.mesh.quaternion.copy(b.pQuat).slerp(b.quat,alpha); } if(b.npc&&b.pos.distanceToSquared(cam.pos)<4900){ const mode=npcMode(b.npc); const sp=b.vel.length(); animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===9) breakdancePose(b,t); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
   for(const a of acorns){ if(!a.taken){ a.mesh.position.y=0.35+Math.sin(t*2+a.phase)*0.06; a.mesh.rotation.y=t+a.phase; } }
   for(const w of whimsy.pigeons){}
   for(const P of players) renderSquirrel(P,dt,t);
+  PLANE.group.position.set((PLANE.pX==null?PLANE.x:PLANE.pX)+((PLANE.x-(PLANE.pX==null?PLANE.x:PLANE.pX))*alpha),(PLANE.pY==null?PLANE.y:PLANE.pY)+((PLANE.y-(PLANE.pY==null?PLANE.y:PLANE.pY))*alpha),(PLANE.pZ==null?PLANE.z:PLANE.pZ)+((PLANE.z-(PLANE.pZ==null?PLANE.z:PLANE.pZ))*alpha));
   for(const sm of WAR.smoke){ sm.g.children.forEach((s2,k)=>{ s2.position.y=((k*1.3+t*1.2+sm.ph)%7); s2.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s2.material.opacity=0.45*(1-s2.position.y/7); }); }
   updateCamera(dt);
   hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
