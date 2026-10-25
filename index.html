@@ -1,0 +1,936 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+</head>
+<body style="margin:0">
+<title>Squirrel Simulator</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Lilita+One&family=Nunito:wght@600;800&display=swap">
+<style>
+/* Layout: full-bleed 3D canvas; HUD pinned to the corners; a single menu card floats over it. One committed look (pine-dark arcade HUD). */
+:root{
+  --bg:#17301f; --panel:#213d2b; --panel2:#2b4d37; --fg:#f4f0e4; --muted:#b9c7b4;
+  --accent:#ffb347; --leaf:#9fd356; --danger:#ff6b6b; --line:#3d6648; --ink:#10211a;
+  --display:'Lilita One','Arial Black',Impact,sans-serif; --body:'Nunito','Segoe UI',system-ui,sans-serif;
+  color-scheme:dark;
+}
+html,body{height:100%;margin:0;overflow:hidden}
+[hidden]{display:none!important}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:15px;line-height:1.35}
+#app{position:relative;width:100%;height:100%}
+canvas#c{display:block;width:100%;height:100%;outline:none;touch-action:none}
+button{font:inherit;font-weight:800;color:var(--ink);background:var(--accent);border:0;border-radius:12px;padding:10px 16px;cursor:pointer;box-shadow:0 3px 0 #b87a22}
+button:hover{filter:brightness(1.06)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #b87a22}
+button:focus-visible,input:focus-visible,.swatch:focus-visible{outline:3px solid var(--leaf);outline-offset:2px}
+button.ghost{background:var(--panel2);color:var(--fg);box-shadow:0 3px 0 #1a2e21}
+button.ghost:active{box-shadow:0 1px 0 #1a2e21}
+button[disabled]{opacity:.5;cursor:not-allowed;filter:none}
+input[type=text]{font:inherit;font-weight:700;color:var(--fg);background:var(--ink);border:2px solid var(--line);border-radius:10px;padding:9px 12px;min-width:0}
+input[type=text]::placeholder{color:#7d917f}
+
+/* HUD */
+.hud{position:absolute;inset:0;pointer-events:none;padding-block:14px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));display:grid;grid-template-columns:1fr auto 1fr;grid-template-rows:auto 1fr auto;gap:10px}
+.hud>*{pointer-events:none}
+.hud .pe{pointer-events:auto}
+.score{grid-column:1;grid-row:1;justify-self:start}
+.score .label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--leaf);font-weight:800}
+.score .num{font-family:var(--display);font-size:clamp(34px,6vw,54px);line-height:1;color:var(--fg);text-shadow:0 3px 0 var(--ink),0 0 18px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
+.toasts{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0}
+.toast{font-family:var(--display);font-size:clamp(18px,3vw,28px);color:var(--accent);text-shadow:0 2px 0 var(--ink),0 0 14px rgba(0,0,0,.4);animation:pop .25s ease-out, fade .5s 1.3s forwards;white-space:nowrap}
+.toast .mult{color:var(--leaf);margin-left:8px}
+@keyframes pop{from{transform:scale(.5) translateY(10px);opacity:0}to{transform:scale(1);opacity:1}}
+@keyframes fade{to{opacity:0;transform:translateY(-12px)}}
+.players{grid-column:3;grid-row:1;justify-self:end;background:rgba(16,33,26,.72);border:1px solid var(--line);border-radius:12px;padding:8px 12px;min-width:150px;font-variant-numeric:tabular-nums}
+.players .row{display:flex;justify-content:space-between;gap:12px;align-items:center}
+.players .dot{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:6px;flex:none}
+.players .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:130px}
+.players .host{font-size:10px;letter-spacing:.1em;color:var(--leaf);margin-left:4px}
+.hint{grid-column:1;grid-row:3;align-self:end;background:rgba(16,33,26,.72);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;color:var(--muted);max-width:min(380px,80vw)}
+.hint b{color:var(--fg)}
+.hint kbd{font:inherit;font-weight:800;color:var(--ink);background:var(--fg);border-radius:5px;padding:0 5px;margin-right:2px}
+.bottomright{grid-column:3;grid-row:3;align-self:end;justify-self:end;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+.code{background:rgba(16,33,26,.72);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:13px;color:var(--muted)}
+.code b{font-family:var(--display);font-size:20px;letter-spacing:.12em;color:var(--accent)}
+.net{font-size:12px;color:var(--muted)}
+.net i{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--danger);margin-right:6px;vertical-align:middle}
+.net.on i{background:var(--leaf)}
+.center{grid-column:2;grid-row:2;align-self:center;justify-self:center;font-family:var(--display);font-size:clamp(22px,4vw,40px);color:var(--fg);text-shadow:0 3px 0 var(--ink);text-align:center}
+.center small{display:block;font-family:var(--body);font-size:14px;font-weight:700;color:var(--muted);text-shadow:none;margin-top:6px}
+
+/* Menu */
+.menu{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(10,24,15,.6);backdrop-filter:blur(6px);padding-block:16px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));overflow:auto}
+.card{background:var(--panel);border:2px solid var(--line);border-radius:20px;max-width:540px;width:100%;padding:22px;box-shadow:0 20px 60px rgba(0,0,0,.45);display:flex;flex-direction:column;gap:16px;min-width:0}
+h1{font-family:var(--display);font-weight:400;font-size:clamp(38px,8vw,60px);line-height:.95;margin:0;color:var(--accent);text-shadow:0 4px 0 var(--ink);text-wrap:balance}
+h1 span{color:var(--leaf)}
+.tag{color:var(--muted);margin:4px 0 0;font-weight:600}
+.field{display:flex;flex-direction:column;gap:6px}
+.field label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--leaf);font-weight:800}
+.swatches{display:flex;gap:10px;flex-wrap:wrap}
+.swatch{width:40px;height:40px;border-radius:50%;border:3px solid transparent;cursor:pointer;padding:0;box-shadow:inset 0 -8px 0 rgba(0,0,0,.18)}
+.swatch[aria-checked=true]{border-color:var(--fg)}
+.actions{display:flex;flex-direction:column;gap:10px}
+.actions .row{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch}
+.actions .row>*{flex:1 1 140px}
+.actions input[type=text]{text-transform:uppercase;letter-spacing:.18em;font-family:var(--display);font-size:20px;text-align:center}
+.status{min-height:1.4em;color:var(--leaf);font-weight:700}
+.status.err{color:var(--danger)}
+.games{display:flex;flex-direction:column;gap:6px}
+.games .g{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--panel2);border-radius:10px;padding:8px 12px}
+.games .g b{font-family:var(--display);letter-spacing:.12em;color:var(--accent);font-weight:400}
+.games .g button{padding:6px 12px;flex:none}
+.howto{font-size:13px;color:var(--muted);border-top:1px solid var(--line);padding-top:12px;display:grid;gap:4px}
+.howto b{color:var(--fg)}
+.howto kbd{font:inherit;font-weight:800;color:var(--ink);background:var(--fg);border-radius:5px;padding:0 5px}
+.hud .menubtn{grid-column:3;grid-row:2;align-self:start;justify-self:end;font-size:13px;padding:6px 12px}
+@media (max-width:640px){
+  .players{display:none}
+  .hint{display:none}
+  .hud{grid-template-columns:1fr 1fr}
+  .toasts{grid-column:1 / span 2;grid-row:2;align-self:start}
+  .center{grid-column:1 / span 2}
+  .bottomright{grid-column:2}
+  .hud .menubtn{grid-column:2;grid-row:1}
+}
+@media (prefers-reduced-motion:reduce){.toast{animation:none}}
+</style>
+
+<div id="app">
+  <canvas id="c" tabindex="0" aria-label="Squirrel Simulator game view"></canvas>
+
+  <div class="hud" id="hud" hidden>
+    <div class="score"><div class="label">Squirrel points</div><div class="num" id="scoreNum">0</div></div>
+    <div class="toasts" id="toasts"></div>
+    <div class="players" id="players"></div>
+    <button class="ghost pe menubtn" id="menuBtn" type="button">Menu (Esc)</button>
+    <div class="center" id="centerMsg" hidden></div>
+    <div class="hint" id="hint">
+      <b>Click the game</b> to grab the mouse. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> run · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump (twice for a tail flip) ·
+      <kbd>F</kbd> / left click headbutt · <kbd>E</kbd> / right click tail-grab and fling · <kbd>R</kbd> ragdoll · run at a tree trunk to climb it.
+    </div>
+    <div class="bottomright">
+      <div class="code" id="codeBox" hidden>Game code <b id="codeTxt"></b></div>
+      <div class="net" id="netTxt"><i></i>Solo</div>
+    </div>
+  </div>
+
+  <div class="menu" id="menu">
+    <div class="card">
+      <div>
+        <h1>Squirrel <span>Simulator</span></h1>
+        <p class="tag">Be the nuisance this neighbourhood deserves. Headbutt cars, bowl over pedestrians, climb trees, fling benches with your tail.</p>
+      </div>
+      <div class="field">
+        <label for="nameIn">Your name</label>
+        <input type="text" id="nameIn" maxlength="14" placeholder="Nutsy" autocomplete="off">
+      </div>
+      <div class="field">
+        <label id="furLabel">Fur</label>
+        <div class="swatches" id="swatches" role="radiogroup" aria-labelledby="furLabel"></div>
+      </div>
+      <div class="actions">
+        <div class="row">
+          <button type="button" id="soloBtn">Play solo</button>
+          <button type="button" id="hostBtn" class="ghost">Host online game</button>
+        </div>
+        <div class="row">
+          <input type="text" id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Game code to join">
+          <button type="button" id="joinBtn" class="ghost">Join with code</button>
+        </div>
+        <div class="games" id="games"></div>
+        <div class="status" id="status"></div>
+      </div>
+      <div class="howto" id="howto">
+        <div><b>Online play</b> works across the internet, not just one Wi-Fi: one of you hosts and shares the 4-letter code, the other joins.</div>
+        <div id="netNote"></div>
+        <div><b>Keyboard and mouse needed.</b> <kbd>WASD</kbd> run, <kbd>Shift</kbd> sprint, <kbd>Space</kbd> jump, <kbd>F</kbd> headbutt, <kbd>E</kbd> tail-grab, <kbd>R</kbd> ragdoll.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script src="https://unpkg.com/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+if(typeof THREE==='undefined'){ $('status').textContent='The 3D library could not load. Check your connection and reload.'; $('status').classList.add('err'); return; }
+
+// ---------------- utils ----------------
+const V3=THREE.Vector3, Q=THREE.Quaternion;
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const r2=x=>Math.round(x*100)/100, r3=x=>Math.round(x*1000)/1000;
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const rng=mulberry32(20261024);
+const UP=new V3(0,1,0);
+const G=22, WORLD=90;
+const FURS=[{n:'Red',c:0xb5552a},{n:'Grey',c:0x8c8c92},{n:'Black',c:0x2b2b30},{n:'Golden',c:0xd9a441},{n:'Snow',c:0xe9e9ef}];
+const approach=(v,t,d)=>v<t?Math.min(v+d,t):Math.max(v-d,t);
+
+// ---------------- renderer / scene ----------------
+const canvas=$('c');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.outputEncoding=THREE.sRGBEncoding;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color(0x9fd0e8);
+scene.fog=new THREE.Fog(0x9fd0e8,70,170);
+const camera=new THREE.PerspectiveCamera(60,1,0.1,400);
+scene.add(new THREE.HemisphereLight(0xdfefff,0x5a7a3a,0.5));
+const sun=new THREE.DirectionalLight(0xfff2d5,0.75);
+sun.castShadow=true; sun.shadow.mapSize.set(2048,2048);
+const sc=sun.shadow.camera; sc.left=-40; sc.right=40; sc.top=40; sc.bottom=-40; sc.near=1; sc.far=160; sun.shadow.bias=-0.0008;
+scene.add(sun); scene.add(sun.target);
+
+const matCache=new Map();
+function mat(c){ if(!matCache.has(c)) matCache.set(c,new THREE.MeshToonMaterial({color:c})); return matCache.get(c); }
+function box(w,h,d,c){ const m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat(c)); m.castShadow=true; m.receiveShadow=true; return m; }
+function sphere(r,c,ws,hs){ const m=new THREE.Mesh(new THREE.SphereGeometry(r,ws||12,hs||10),mat(c)); m.castShadow=true; return m; }
+function cyl(rt,rb,h,c,seg){ const m=new THREE.Mesh(new THREE.CylinderGeometry(rt,rb,h,seg||12),mat(c)); m.castShadow=true; m.receiveShadow=true; return m; }
+
+// ---------------- world: ground, road, houses, trees ----------------
+const ground=new THREE.Mesh(new THREE.PlaneGeometry(420,420),new THREE.MeshLambertMaterial({color:0x6fae4f}));
+ground.rotation.x=-Math.PI/2; ground.receiveShadow=true; scene.add(ground);
+const road=new THREE.Mesh(new THREE.PlaneGeometry(190,8),new THREE.MeshLambertMaterial({color:0x4a4a52}));
+road.rotation.x=-Math.PI/2; road.position.y=0.01; road.receiveShadow=true; scene.add(road);
+for(let x=-90;x<=90;x+=6){ const d=new THREE.Mesh(new THREE.PlaneGeometry(3,0.3),new THREE.MeshLambertMaterial({color:0xe8e2b0})); d.rotation.x=-Math.PI/2; d.position.set(x,0.02,0); scene.add(d); }
+for(const z of [-5.3,5.3]){ const sw=new THREE.Mesh(new THREE.PlaneGeometry(190,2.6),new THREE.MeshLambertMaterial({color:0xb9b4a6})); sw.rotation.x=-Math.PI/2; sw.position.set(0,0.015,z); sw.receiveShadow=true; scene.add(sw); }
+
+const statics=[];
+function addStatic(cx,cy,cz,hx,hy,hz){ statics.push({min:new V3(cx-hx,cy-hy,cz-hz),max:new V3(cx+hx,cy+hy,cz+hz),c:new V3(cx,cy,cz)}); }
+const houseColors=[0xf2d7a7,0xc9dbe8,0xe8c3c3,0xd6e3c0,0xf0e1c6];
+for(let side=-1;side<=1;side+=2) for(let i=0;i<5;i++){
+  const x=-48+i*24, z=side*20, w=10,h=6,d=8;
+  const g=new THREE.Group();
+  const walls=box(w,h,d,houseColors[(i+(side>0?2:0))%5]); walls.position.y=h/2; g.add(walls);
+  const roof=new THREE.Mesh(new THREE.ConeGeometry(Math.hypot(w,d)/2*1.05,3,4),mat([0x8a4b3a,0x5b6b7a,0x7a5a3a][i%3])); roof.position.y=h+1.5; roof.rotation.y=Math.PI/4; roof.castShadow=true; g.add(roof);
+  const door=box(1.2,2.2,0.2,0x5a3a26); door.position.set(1.5,1.1,-side*(d/2+0.05)); g.add(door);
+  for(const wx of [-3,-1]){ const win=box(1.4,1.2,0.2,0x9fd8f0); win.position.set(wx,3,-side*(d/2+0.05)); g.add(win); }
+  g.position.set(x,0,z); scene.add(g);
+  addStatic(x,h/2,z,w/2,h/2,d/2);
+}
+const trees=[];
+for(let i=0;i<18;i++){
+  const side=rng()<0.5?-1:1, near=rng()<0.5;
+  const z=side*(near?9+rng()*4:28+rng()*14), x=-72+rng()*144;
+  const h=6+rng()*3;
+  const g=new THREE.Group();
+  const trunk=cyl(0.35,0.5,h,0x6b4a2e,8); trunk.position.y=h/2; g.add(trunk);
+  const leaf=[0x3f8f3a,0x4da140,0x5fb04a][i%3];
+  for(const [cx,cy,cz,cr] of [[0,h+1.2,0,2.6],[1.2,h+0.6,0.6,1.9],[-1.1,h+0.8,-0.7,1.8],[0.2,h+2.4,-0.3,1.6]]){ const s=sphere(cr,leaf,10,8); s.position.set(cx,cy,cz); g.add(s); }
+  g.position.set(x,0,z); scene.add(g);
+  trees.push({x,z,r:0.45,h,platY:h+3.0,platR:1.9});
+}
+// trampolines
+const pads=[{x:-18,z:9.6},{x:28,z:-9.6},{x:60,z:11}];
+for(const p of pads){ const g=new THREE.Group(); const rim=cyl(1.7,1.7,0.5,0x2b4bb0,20); rim.position.y=0.25; g.add(rim); const top=cyl(1.4,1.4,0.52,0x1c1c22,20); top.position.y=0.26; g.add(top); g.position.set(p.x,0,p.z); scene.add(g); p.r=1.6; p.y=0.52; }
+
+// ---------------- rigid bodies ----------------
+const corners=[]; for(const sx of [-1,1]) for(const sy of [-1,1]) for(const sz of [-1,1]) corners.push([sx,sy,sz]);
+const tv=new V3(), tv2=new V3(), tv3=new V3(), tq=new Q(), tq2=new Q();
+class Body{
+  constructor(o){
+    this.idx=o.idx; this.kind=o.kind; this.half=o.half.clone(); this.mass=o.mass; this.invMass=1/o.mass;
+    this.I=2*o.mass/9*(this.half.x**2+this.half.y**2+this.half.z**2); this.invI=1/this.I;
+    this.pos=new V3(); this.vel=new V3(); this.quat=new Q(); this.angVel=new V3();
+    this.radius=this.half.length(); this.sleep=0; this.asleep=false; this.held=null; this.kinematic=false;
+    this.mesh=o.mesh; this.e=o.e==null?0.25:o.e; this.mu=o.mu==null?0.6:o.mu;
+    this.tPos=new V3(); this.tQuat=new Q(); this.lastHitBy=null; this.npc=null; this.label=o.label||o.kind;
+  }
+  wake(){ this.asleep=false; this.sleep=0; }
+  applyImpulse(imp,point){
+    this.wake(); this.vel.addScaledVector(imp,this.invMass);
+    if(point){ tv.subVectors(point,this.pos); tv2.crossVectors(tv,imp); this.angVel.addScaledVector(tv2,this.invI); }
+  }
+  speed(){ return this.vel.length(); }
+}
+const bodies=[];
+function addBody(kind,half,mass,x,z,yaw,mesh,opts){
+  const b=new Body(Object.assign({idx:bodies.length,kind,half,mass,mesh},opts||{}));
+  b.pos.set(x,half.y,z); b.quat.setFromAxisAngle(UP,yaw); b.tPos.copy(b.pos); b.tQuat.copy(b.quat);
+  mesh.position.copy(b.pos); mesh.quaternion.copy(b.quat); scene.add(mesh); bodies.push(b); return b;
+}
+function stepBody(b,dt){
+  if(b.asleep||b.kinematic||b.held) return;
+  b.vel.y-=G*dt;
+  b.vel.multiplyScalar(1-0.05*dt);
+  b.pos.addScaledVector(b.vel,dt);
+  const w=b.angVel.length();
+  if(w>1e-4){ tq.setFromAxisAngle(tv.copy(b.angVel).divideScalar(w),w*dt); b.quat.premultiply(tq).normalize(); }
+  let maxPen=0, grounded=false;
+  // trampoline check for bodies
+  for(const p of pads){ const dx=b.pos.x-p.x, dz=b.pos.z-p.z; if(dx*dx+dz*dz<p.r*p.r && b.pos.y-b.half.y<p.y && b.vel.y<-1){ b.vel.y=Math.max(13,-b.vel.y*1.1); b.angVel.x+=(rng()-0.5)*6; b.angVel.z+=(rng()-0.5)*6; } }
+  for(const c of corners){
+    tv.set(c[0]*b.half.x,c[1]*b.half.y,c[2]*b.half.z).applyQuaternion(b.quat);
+    const wy=b.pos.y+tv.y;
+    if(wy<0){
+      grounded=true; if(-wy>maxPen) maxPen=-wy;
+      tv2.crossVectors(b.angVel,tv).add(b.vel); // velocity at point
+      if(tv2.y<0){
+        tv3.set(-tv.z,0,tv.x); // r x n
+        const denom=b.invMass+b.invI*tv3.lengthSq();
+        const j=-(1+b.e)*tv2.y/denom;
+        b.vel.y+=j*b.invMass; b.angVel.addScaledVector(tv3,j*b.invI);
+        const vtx=tv2.x, vtz=tv2.z, vtl=Math.hypot(vtx,vtz);
+        if(vtl>1e-3){
+          const tx=vtx/vtl, tz=vtz/vtl;
+          const rt=new V3().crossVectors(tv,new V3(tx,0,tz));
+          const denomT=b.invMass+b.invI*rt.lengthSq();
+          const jt=Math.min(vtl/denomT,b.mu*j);
+          b.vel.x-=tx*jt*b.invMass; b.vel.z-=tz*jt*b.invMass; b.angVel.addScaledVector(rt,-jt*b.invI);
+        }
+      }
+    }
+  }
+  if(maxPen>0) b.pos.y+=maxPen;
+  if(grounded) b.angVel.multiplyScalar(1-3*dt); else b.angVel.multiplyScalar(1-0.4*dt);
+  if(grounded&&b.vel.lengthSq()<0.05&&b.angVel.lengthSq()<0.12){ b.sleep+=dt; if(b.sleep>0.9){ b.asleep=true; b.vel.set(0,0,0); b.angVel.set(0,0,0); } } else b.sleep=0;
+  if(Math.abs(b.pos.x)>WORLD){ b.pos.x=Math.sign(b.pos.x)*WORLD; b.vel.x*=-0.5; }
+  if(Math.abs(b.pos.z)>WORLD){ b.pos.z=Math.sign(b.pos.z)*WORLD; b.vel.z*=-0.5; }
+  // static boxes (sphere approx)
+  const r=b.radius*0.7;
+  for(const s of statics){
+    tv.set(clamp(b.pos.x,s.min.x,s.max.x),clamp(b.pos.y,s.min.y,s.max.y),clamp(b.pos.z,s.min.z,s.max.z));
+    tv2.subVectors(b.pos,tv); const d=tv2.length();
+    if(d<r){
+      if(d<1e-4){ tv2.subVectors(b.pos,s.c); tv2.y=0; if(tv2.lengthSq()<1e-6) tv2.set(1,0,0); tv2.normalize(); } else tv2.divideScalar(d);
+      b.pos.addScaledVector(tv2,r-d);
+      const vn=b.vel.dot(tv2); if(vn<0){ b.vel.addScaledVector(tv2,-vn*1.3); b.angVel.x+=(rng()-0.5)*2; b.angVel.z+=(rng()-0.5)*2; }
+    }
+  }
+  // trees (trunk) for bodies
+  for(const t of trees){
+    const dx=b.pos.x-t.x, dz=b.pos.z-t.z, d=Math.hypot(dx,dz), rr=r*0.8+t.r;
+    if(d<rr && b.pos.y<t.h){ const nx=d>1e-4?dx/d:1, nz=d>1e-4?dz/d:0; b.pos.x+=nx*(rr-d); b.pos.z+=nz*(rr-d); const vn=b.vel.x*nx+b.vel.z*nz; if(vn<0){ b.vel.x-=nx*vn*1.3; b.vel.z-=nz*vn*1.3; } }
+  }
+}
+function collideBodies(dt){
+  for(let i=0;i<bodies.length;i++){
+    const a=bodies[i]; if(a.held) continue;
+    for(let j=i+1;j<bodies.length;j++){
+      const b=bodies[j]; if(b.held) continue;
+      if((a.asleep||a.kinematic)&&(b.asleep||b.kinematic)) continue;
+      const ra=a.radius*0.62, rb=b.radius*0.62;
+      tv.subVectors(b.pos,a.pos); const d=tv.length(); if(d>ra+rb||d<1e-5) continue;
+      tv.divideScalar(d); const pen=ra+rb-d;
+      const ima=a.kinematic?0:a.invMass, imb=b.kinematic?0:b.invMass, sum=ima+imb; if(sum===0) continue;
+      a.pos.addScaledVector(tv,-pen*ima/sum); b.pos.addScaledVector(tv,pen*imb/sum);
+      tv2.subVectors(b.vel,a.vel); const vn=tv2.dot(tv);
+      if(vn<0){
+        const jn=-(1+0.3)*vn/sum;
+        if(!a.kinematic){ a.wake(); a.vel.addScaledVector(tv,-jn*ima); tv3.crossVectors(tv,a.vel); a.angVel.addScaledVector(tv3,jn*a.invI*0.25); }
+        if(!b.kinematic){ b.wake(); b.vel.addScaledVector(tv,jn*imb); tv3.crossVectors(tv,b.vel); b.angVel.addScaledVector(tv3,-jn*b.invI*0.25); }
+        // props bowling over walking pedestrians
+        if(a.npc&&a.kinematic&&b.speed()>3){ ragdollNPC(a.npc,tv3.copy(b.vel).multiplyScalar(0.9*a.mass),b.lastHitBy); }
+        if(b.npc&&b.kinematic&&a.speed()>3){ ragdollNPC(b.npc,tv3.copy(a.vel).multiplyScalar(0.9*b.mass),a.lastHitBy); }
+      }
+    }
+  }
+}
+
+// ---------------- prop meshes ----------------
+function makeCar(c){ const g=new THREE.Group(); const ch=box(4.2,0.9,1.9,c); ch.position.y=-0.2; g.add(ch); const cab=box(2.2,0.7,1.7,0xcdeeff); cab.position.set(-0.2,0.45,0); g.add(cab);
+  for(const [x,z] of [[1.4,0.95],[1.4,-0.95],[-1.4,0.95],[-1.4,-0.95]]){ const w=cyl(0.36,0.36,0.3,0x222226,14); w.rotation.x=Math.PI/2; w.position.set(x,-0.45,z); g.add(w); }
+  for(const z of [0.6,-0.6]){ const l=box(0.1,0.25,0.4,0xfff3b0); l.position.set(2.1,-0.1,z); g.add(l); const t=box(0.1,0.25,0.4,0xff5a4a); t.position.set(-2.1,-0.1,z); g.add(t); }
+  return g; }
+function makeBench(){ const g=new THREE.Group(); const seat=box(1.8,0.12,0.55,0x9c6b3c); seat.position.y=-0.05; g.add(seat); const back=box(1.8,0.5,0.1,0x9c6b3c); back.position.set(0,0.22,-0.25); g.add(back); for(const x of [-0.8,0.8]){ const l=box(0.1,0.4,0.5,0x44464a); l.position.set(x,-0.25,0); g.add(l); } return g; }
+function makeTrash(){ const g=new THREE.Group(); const c=cyl(0.3,0.27,0.9,0x4f7f6b,14); c.position.y=-0.02; g.add(c); const lid=cyl(0.34,0.34,0.08,0x3a5f50,14); lid.position.y=0.43; g.add(lid); return g; }
+function makePicnic(){ const g=new THREE.Group(); const top=box(1.8,0.1,0.8,0xb5825a); top.position.y=0.3; g.add(top); for(const z of [-0.6,0.6]){ const s=box(1.8,0.08,0.3,0xb5825a); s.position.set(0,-0.05,z); g.add(s); } for(const x of [-0.7,0.7]){ const l=box(0.1,0.7,1.3,0x8a5f3d); l.position.set(x,-0.05,0); g.add(l); } return g; }
+function makeMailbox(){ const g=new THREE.Group(); const p=box(0.12,0.9,0.12,0x6b4a2e); p.position.y=-0.15; g.add(p); const b=box(0.5,0.35,0.3,0x3b5bd6); b.position.y=0.42; g.add(b); const f=box(0.06,0.1,0.3,0xff4a4a); f.position.set(0.28,0.5,0); g.add(f); return g; }
+function makeCrate(){ const g=new THREE.Group(); g.add(box(1,1,1,0xb98a4e)); const s=box(1.02,0.12,1.02,0x8a5f3d); g.add(s); return g; }
+function makePotty(){ const g=new THREE.Group(); g.add(box(1.2,2.2,1.2,0x3d7ad9)); const d=box(0.9,1.9,0.05,0x2f5fb0); d.position.set(0,-0.05,0.62); g.add(d); const r=box(1.3,0.1,1.3,0xdddddd); r.position.y=1.12; g.add(r); return g; }
+function makeStatue(){ const g=new THREE.Group(); const ped=box(1,0.6,1,0xa9a9a9); ped.position.y=-0.8; g.add(ped); const legs=box(0.45,0.6,0.3,0x8f8f96); legs.position.y=-0.2; g.add(legs); const torso=box(0.5,0.7,0.3,0x8f8f96); torso.position.y=0.45; g.add(torso); const head=sphere(0.17,0x8f8f96); head.position.y=0.95; g.add(head); const arm=box(0.14,0.6,0.14,0x8f8f96); arm.position.set(0.4,0.75,0.1); arm.rotation.z=-0.6; g.add(arm); return g; }
+const SKINS=[0xf1c9a5,0xd9a376,0x9c6b4a,0x6b4a35,0xf7d7c4];
+const SHIRTS=[0xe85d5d,0x4aa3df,0x7bc96f,0xf2c14e,0xb77be0,0xffffff];
+function makeHuman(i){
+  const g=new THREE.Group(), parts={legs:[],arms:[]};
+  const skin=SKINS[i%SKINS.length], shirt=SHIRTS[(i*2)%SHIRTS.length], pants=[0x2f3f7a,0x6a5a46,0x333][i%3];
+  for(const x of [-0.11,0.11]){ const hip=new THREE.Group(); hip.position.set(x,-0.1,0); const leg=box(0.18,0.8,0.2,pants); leg.position.y=-0.4; hip.add(leg); g.add(hip); parts.legs.push(hip); }
+  const torso=box(0.5,0.6,0.3,shirt); torso.position.y=0.2; g.add(torso);
+  const head=sphere(0.18,skin,12,10); head.position.y=0.68; g.add(head);
+  const hair=box(0.3,0.1,0.32,[0x2a1d14,0x8a5a2b,0xd8c27a,0x222][i%4]); hair.position.y=0.84; g.add(hair);
+  for(const x of [-0.31,0.31]){ const sh=new THREE.Group(); sh.position.set(x,0.45,0); const arm=box(0.12,0.6,0.14,skin); arm.position.y=-0.3; sh.add(arm); g.add(sh); parts.arms.push(sh); }
+  g.userData.parts=parts; return g;
+}
+
+// bodies: order is deterministic so every player shares indices
+const CARCOLORS=[0xe0433a,0x2f7de1,0xf0c33a];
+[[-30,2,0],[5,-2,Math.PI],[38,2,0.1]].forEach(([x,z,y],i)=>addBody('car',new V3(2.1,0.8,0.95),12,x,z,y,makeCar(CARCOLORS[i]),{e:0.2,mu:0.5,label:'car'}));
+[[-55,7.6,Math.PI],[-20,7.6,Math.PI],[15,7.6,Math.PI],[50,7.6,Math.PI],[-40,-7.6,0],[30,-7.6,0]].forEach(([x,z,y])=>addBody('bench',new V3(0.9,0.45,0.3),3,x,z,y,makeBench(),{label:'bench'}));
+[[-52,7.6],[-17,7.6],[18,7.6],[53,7.6],[-37,-7.6],[33,-7.6]].forEach(([x,z])=>addBody('trash',new V3(0.3,0.47,0.3),1.5,x,z,0,makeTrash(),{label:'trash can'}));
+[[-12,32,0.3],[20,-33,-0.4],[-40,-35,1.2],[45,34,0.8]].forEach(([x,z,y])=>addBody('picnic',new V3(0.9,0.4,0.75),4,x,z,y,makePicnic(),{label:'picnic table'}));
+[[-24,14],[0,-14],[24,14]].forEach(([x,z])=>addBody('mailbox',new V3(0.25,0.6,0.15),1,x,z,0,makeMailbox(),{label:'mailbox'}));
+[[-5,11],[12,-11]].forEach(([x,z])=>addBody('crate',new V3(0.5,0.5,0.5),2,x,z,0.4,makeCrate(),{label:'crate'}));
+addBody('potty',new V3(0.6,1.1,0.6),3,60,-12,0,makePotty(),{label:'porta-potty'});
+addBody('statue',new V3(0.5,1.1,0.5),6,-8,-12,0,makeStatue(),{label:'statue'});
+const npcs=[];
+for(let i=0;i<6;i++){
+  const side=i%2?1:-1; const x=-60+i*24+rng()*10, z=side*5.3;
+  const mesh=makeHuman(i);
+  const b=addBody('npc',new V3(0.25,0.9,0.18),2.5,x,z,rng()*6.28,mesh,{e:0.15,mu:0.8,label:'pedestrian'});
+  b.kinematic=true;
+  const n={body:b,state:'walk',target:{x:-70+rng()*140,z:side*5.3},speed:1.3,fleeT:0,ragT:0,spookCd:0,walkPhase:rng()*6,localRag:false};
+  b.npc=n; npcs.push(n);
+}
+// acorns
+const acorns=[];
+for(let i=0;i<40;i++){
+  let x,z; do{ x=-80+rng()*160; z=(rng()<0.5?-1:1)*(4.2+rng()*40); }while(Math.abs(z)<4.3);
+  const g=new THREE.Group(); const nut=sphere(0.22,0xb07a3c,10,8); nut.scale.y=1.25; g.add(nut); const cap=cyl(0.2,0.24,0.12,0x6b4a2e,10); cap.position.y=0.2; g.add(cap);
+  g.position.set(x,0.35,z); scene.add(g); acorns.push({x,z,mesh:g,taken:0,phase:rng()*6});
+}
+
+// ---------------- squirrel mesh ----------------
+function makeSquirrel(fur){
+  const g=new THREE.Group(), parts={legs:[],arms:[]};
+  const belly=0xf1dcb8, dark=0x1b1b1f;
+  const body=sphere(0.32,fur,14,12); body.scale.set(1,0.9,1.3); body.position.y=0.42; g.add(body);
+  const bl=sphere(0.22,belly,12,10); bl.scale.set(0.9,0.8,1); bl.position.set(0,0.36,0.14); g.add(bl);
+  const head=sphere(0.24,fur,14,12); head.position.set(0,0.78,0.3); g.add(head); parts.head=head;
+  const snout=sphere(0.11,belly,10,8); snout.scale.set(1,0.8,1.1); snout.position.set(0,0.72,0.52); g.add(snout);
+  const nose=sphere(0.045,dark,8,6); nose.position.set(0,0.74,0.62); g.add(nose);
+  for(const x of [-0.11,0.11]){ const e=sphere(0.055,dark,8,6); e.position.set(x,0.85,0.49); g.add(e); const h=sphere(0.02,0xffffff,6,4); h.position.set(x+0.02,0.87,0.535); g.add(h);
+    const ear=new THREE.Mesh(new THREE.ConeGeometry(0.075,0.18,8),mat(fur)); ear.position.set(x*1.3,1.02,0.26); ear.rotation.z=-x*1.6; ear.castShadow=true; g.add(ear);
+    const cheek=sphere(0.045,0xe8a2a2,8,6); cheek.position.set(x*1.5,0.73,0.46); g.add(cheek); }
+  for(const x of [-0.2,0.2]){ const a=new THREE.Group(); a.position.set(x,0.5,0.3); const arm=cyl(0.05,0.045,0.26,fur,8); arm.position.y=-0.12; a.add(arm); g.add(a); parts.arms.push(a); }
+  for(const [x,z,r] of [[-0.17,0.18,0.065],[0.17,0.18,0.065],[-0.21,-0.2,0.09],[0.21,-0.2,0.09]]){ const l=new THREE.Group(); l.position.set(x,0.27,z); const leg=cyl(r,r*0.9,0.3,fur,8); leg.position.y=-0.13; l.add(leg); g.add(l); parts.legs.push(l); }
+  const tail=new THREE.Group(); tail.position.set(0,0.4,-0.38);
+  const ts=[[0,-0.02,-0.08,0.12],[0,0.12,-0.3,0.17],[0,0.38,-0.46,0.21],[0,0.66,-0.48,0.2],[0,0.88,-0.36,0.16]];
+  for(const [x,y,z,r] of ts){ const s=sphere(r,fur,12,10); s.position.set(x,y,z); tail.add(s); }
+  const tip=sphere(0.09,belly,8,6); tip.position.set(0,0.98,-0.26); tail.add(tip);
+  g.add(tail); parts.tail=tail;
+  const holder=new THREE.Group(); g.position.y=-0.4; holder.add(g);
+  holder.traverse(m=>{ if(m.isMesh) m.castShadow=true; });
+  return {holder,g,parts};
+}
+function animSquirrel(m,an,speed,t,dt,spin){
+  const p=m.parts;
+  if(an===1){ const f=t*Math.min(14,6+speed); p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i%2?Math.PI:0)+(i>1?Math.PI:0))*0.9); p.arms.forEach((a,i)=>a.rotation.x=Math.sin(f+(i?0:Math.PI))*0.9); p.tail.rotation.x=0.1+Math.sin(f*0.5)*0.25; m.g.position.y=-0.4+Math.abs(Math.sin(f))*0.06; }
+  else if(an===2){ p.legs.forEach(l=>l.rotation.x=-0.9); p.arms.forEach(a=>a.rotation.x=-1.6); p.tail.rotation.x=-0.9; m.g.position.y=-0.4; }
+  else if(an===4){ const f=t*9; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i%2?Math.PI:0))*0.7); p.arms.forEach((a,i)=>a.rotation.x=Math.sin(f+(i?0:Math.PI))*0.7); p.tail.rotation.x=0.4; }
+  else if(an===3){ p.legs.forEach((l,i)=>l.rotation.x=Math.sin(t*6+i)*0.6); p.arms.forEach((a,i)=>a.rotation.x=Math.sin(t*7+i)*1.2); p.tail.rotation.x=Math.sin(t*5)*0.6; }
+  else { p.legs.forEach(l=>l.rotation.x=0); p.arms.forEach(a=>a.rotation.x=-0.3); p.tail.rotation.x=Math.sin(t*1.8)*0.18; p.tail.rotation.z=Math.sin(t*1.2)*0.12; p.head.rotation.z=Math.sin(t*0.7)*0.12; m.g.position.y=-0.4; }
+  m.g.rotation.y=spin||0;
+}
+function animHuman(mesh,mode,speed,t){
+  const p=mesh.userData.parts;
+  if(mode===1){ p.legs.forEach((l,i)=>l.rotation.x=Math.sin(t*9+i*2)*1.1); p.arms.forEach((a,i)=>a.rotation.x=Math.sin(t*11+i)*1.6); }
+  else if(mode===2){ const f=t*12; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i?Math.PI:0))*0.9); p.arms.forEach((a,i)=>{a.rotation.x=Math.PI+Math.sin(f+i)*0.4; a.rotation.z=(i?-1:1)*0.4;}); }
+  else { const f=t*7*Math.min(1,speed/1.3); const amp=Math.min(1,speed/1.3)*0.6; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i?Math.PI:0))*amp); p.arms.forEach((a,i)=>{a.rotation.x=Math.sin(f+(i?0:Math.PI))*amp; a.rotation.z=0;}); }
+}
+
+// ---------------- audio (tiny) ----------------
+let ac=null;
+function beep(f,d,type,vol){ try{ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)(); const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
+
+// ---------------- player ----------------
+const player={pos:new V3(0,0,8),vel:new V3(),yaw:0,grounded:false,coyote:0,jumps:0,air:0,climbing:null,climbAng:0,rag:null,ragT:0,held:null,score:0,combo:0,lastTrick:0,an:0,spin:0,spinV:0,sprint:false,name:'Nutsy',color:0,mesh:null,headbuttT:0};
+const cam={yaw:Math.PI,pitch:0.35,dist:6.5,pos:new V3()};
+const keys={};
+let myHits=[], hitSeq=0, nextTrickId=0;
+
+function setFur(i){ player.color=i; if(player.mesh) scene.remove(player.mesh.holder); player.mesh=makeSquirrel(FURS[i].c); scene.add(player.mesh.holder); try{ localStorage.setItem('sq_fur',String(i)); }catch(e){} }
+
+function trick(name,pts){
+  const now=performance.now()/1000;
+  if(now-player.lastTrick<2.5) player.combo++; else player.combo=1;
+  player.lastTrick=now;
+  const mult=Math.min(player.combo,5);
+  player.score+=pts*mult;
+  const el=document.createElement('div'); el.className='toast'; el.textContent=name+' +'+pts;
+  if(mult>1){ const m=document.createElement('span'); m.className='mult'; m.textContent='×'+mult; el.appendChild(m); }
+  const box=$('toasts'); box.appendChild(el); while(box.children.length>4) box.removeChild(box.firstChild);
+  setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },1900);
+  beep(420+mult*80,0.12,'square',0.04);
+}
+
+function hitBody(b,imp,point){
+  b.lastHitBy='me'; b.lastHitT=performance.now();
+  if(Net.isHost){ b.applyImpulse(imp,point); if(b.npc&&b.npc.state!=='rag'&&imp.length()>2.5) ragdollNPC(b.npc,null,'me'); }
+  else {
+    myHits.push([++hitSeq,b.idx,r2(imp.x),r2(imp.y),r2(imp.z),r2(point.x),r2(point.y),r2(point.z)]);
+    if(myHits.length>8) myHits.shift();
+    b.vel.copy(imp).multiplyScalar(b.invMass); // local guess until host state arrives
+    if(b.npc&&remoteNpcMode[b.npc.body.idx]===0&&imp.length()>2.5&&!b.npc.localRag){ b.npc.localRag=true; setTimeout(()=>b.npc.localRag=false,3000); trick('BOWLED PEDESTRIAN',100); }
+  }
+}
+
+function headbutt(){
+  if(player.rag||player.climbing) return;
+  player.headbuttT=0.25;
+  const fwd=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw));
+  const origin=tv.copy(player.pos).addScaledVector(fwd,0.8); origin.y+=0.4;
+  let any=false;
+  for(const b of bodies){
+    if(b.held) continue;
+    tv2.subVectors(b.pos,origin); const d=tv2.length()-b.radius*0.5; if(d>2.2) continue;
+    tv2.y=0; tv2.normalize(); if(tv2.dot(fwd)<0.2) continue;
+    const vmag=9*Math.sqrt(2.5/(b.mass+1.5))*(player.sprint?1.3:1);
+    const dir=new V3().copy(fwd).multiplyScalar(1).add(new V3(0,0.55,0)).normalize();
+    const imp=dir.multiplyScalar(vmag*b.mass);
+    const pt=new V3().copy(player.pos).addScaledVector(fwd,0.6); pt.y+=0.5;
+    hitBody(b,imp,pt);
+    any=true;
+    if(b.kind==='car') trick('CAR SMASH',75); else if(!b.npc) trick('HEADBUTT',25);
+  }
+  if(!any) beep(180,0.08,'triangle',0.03);
+}
+function tailGrab(){
+  if(player.rag||player.climbing) return;
+  if(player.held){ // release / fling
+    const b=player.held; const fwd=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw));
+    const v=new V3().copy(fwd).multiplyScalar(player.sprint?16:11); v.y=6; v.add(player.vel);
+    b.held=null; player.held=null;
+    const imp=v.multiplyScalar(b.mass);
+    if(Net.isHost){ b.wake(); b.vel.set(0,0,0); b.applyImpulse(imp,null); b.angVel.set((rng()-0.5)*8,(rng()-0.5)*8,(rng()-0.5)*8); b.lastHitBy='me'; }
+    else { myHits.push([++hitSeq,b.idx,r2(imp.x),r2(imp.y),r2(imp.z),r2(b.pos.x),r2(b.pos.y),r2(b.pos.z)]); if(myHits.length>8) myHits.shift(); b.lastHitBy='me'; }
+    trick('TAIL FLING',40); return;
+  }
+  const fwd=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw));
+  let best=null,bd=2.6;
+  for(const b of bodies){ if(b.held) continue; tv.subVectors(b.pos,player.pos); const d=tv.length()-b.radius*0.4; if(d<bd){ bd=d; best=b; } }
+  if(!best) return;
+  if(best.npc&&Net.isHost&&best.npc.state!=='rag') ragdollNPC(best.npc,null,'me');
+  best.held='me'; player.held=best; best.wake();
+  trick('TAIL GRAB',10);
+}
+function enterRagdoll(v){
+  if(player.held) tailGrab();
+  if(player.climbing) player.climbing=null;
+  const b=new Body({idx:-1,kind:'player',half:new V3(0.38,0.3,0.3),mass:1.5,mesh:null,e:0.35,mu:0.5});
+  b.pos.copy(player.pos); b.pos.y+=0.4; b.vel.copy(v); b.angVel.set((rng()-0.5)*10,(rng()-0.5)*6,(rng()-0.5)*10);
+  b.quat.setFromAxisAngle(UP,player.yaw);
+  player.rag=b; player.ragT=0;
+}
+function exitRagdoll(){
+  const b=player.rag; player.pos.copy(b.pos); player.pos.y=Math.max(0,player.pos.y-0.4); player.vel.copy(b.vel); player.rag=null; player.jumps=1;
+}
+function jump(){
+  if(player.rag) return;
+  if(player.climbing){ const t=player.climbing; const ax=Math.cos(player.climbAng), az=Math.sin(player.climbAng); player.vel.set(ax*6,8.5,az*6); player.climbing=null; player.jumps=1; player.yaw=Math.atan2(ax,az); return; }
+  if(player.grounded||player.coyote>0){ player.vel.y=9.5; player.grounded=false; player.coyote=0; player.jumps=1; beep(300,0.1,'triangle',0.03); }
+  else if(player.jumps<2){ player.vel.y=8.5; player.jumps=2; player.spinV=14; trick('TAIL FLIP',15); }
+}
+
+const remoteNpcMode=new Array(bodies.length).fill(0);
+function ragdollNPC(n,imp,by){
+  if(n.state==='rag') return;
+  n.state='rag'; n.ragT=0; const b=n.body; b.kinematic=false; b.wake();
+  if(imp) b.applyImpulse(imp,null);
+  b.vel.y+=3; b.angVel.set((rng()-0.5)*8,(rng()-0.5)*4,(rng()-0.5)*8);
+  if(by==='me') trick('BOWLED PEDESTRIAN',100);
+}
+function updateNPCs(dt){
+  for(const n of npcs){
+    const b=n.body;
+    if(n.state==='rag'){
+      n.ragT+=dt;
+      if(n.ragT>5&&b.vel.lengthSq()<0.3&&b.pos.y<1.2){ n.state='walk'; b.kinematic=true; b.asleep=false; b.vel.set(0,0,0); b.angVel.set(0,0,0); b.pos.y=0.9; b.quat.setFromAxisAngle(UP,rng()*6.28); n.target={x:clamp(b.pos.x+(rng()-0.5)*30,-70,70),z:(rng()<0.5?-1:1)*5.3}; }
+      continue;
+    }
+    // flee check
+    let threat=null, td=3.5;
+    const check=(px,pz)=>{ const d=Math.hypot(b.pos.x-px,b.pos.z-pz); if(d<td){ td=d; threat={x:px,z:pz}; } };
+    check(player.pos.x,player.pos.z); for(const r of Net.remotes.values()) if(r.st&&r.st.p) check(r.st.p[0],r.st.p[2]);
+    if(threat){ n.fleeT=2.5; n.flee={x:b.pos.x-threat.x,z:b.pos.z-threat.z}; }
+    let dx,dz,speed;
+    if(n.fleeT>0){ n.fleeT-=dt; dx=n.flee.x; dz=n.flee.z; speed=3.6; if(n.state!=='flee'){ n.state='flee'; } }
+    else { n.state='walk'; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed; if(Math.hypot(dx,dz)<1){ n.target={x:-70+rng()*140,z:(rng()<0.5?-1:1)*5.3}; continue; } }
+    const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
+    b.pos.x=clamp(b.pos.x+dx*speed*dt,-80,80); b.pos.z=clamp(b.pos.z+dz*speed*dt,-45,45); b.pos.y=0.9;
+    b.vel.set(dx*speed,0,dz*speed);
+    tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt));
+    for(const s of statics){ const cx=clamp(b.pos.x,s.min.x,s.max.x), cz=clamp(b.pos.z,s.min.z,s.max.z); const ex=b.pos.x-cx, ez=b.pos.z-cz, dd=Math.hypot(ex,ez); if(dd<0.5){ if(dd>1e-4){ b.pos.x+=ex/dd*(0.5-dd); b.pos.z+=ez/dd*(0.5-dd);} n.target={x:-70+rng()*140,z:(rng()<0.5?-1:1)*5.3}; } }
+  }
+}
+
+// player collisions
+function collidePlayerBodies(dt){
+  const pr=0.5; const c=tv.copy(player.pos); c.y+=0.45;
+  for(const b of bodies){
+    if(b.held==='me') continue;
+    tv2.subVectors(c,b.pos); if(tv2.length()>b.radius+pr) continue;
+    tq.copy(b.quat).invert(); tv2.applyQuaternion(tq);
+    const lx=clamp(tv2.x,-b.half.x,b.half.x), ly=clamp(tv2.y,-b.half.y,b.half.y), lz=clamp(tv2.z,-b.half.z,b.half.z);
+    tv3.set(tv2.x-lx,tv2.y-ly,tv2.z-lz); let d=tv3.length();
+    if(d>=pr) continue;
+    if(d<1e-4){ const px=b.half.x-Math.abs(tv2.x), py=b.half.y-Math.abs(tv2.y), pz=b.half.z-Math.abs(tv2.z); if(py<=px&&py<=pz) tv3.set(0,Math.sign(tv2.y)||1,0); else if(px<=pz) tv3.set(Math.sign(tv2.x)||1,0,0); else tv3.set(0,0,Math.sign(tv2.z)||1); d=0; } else tv3.divideScalar(d);
+    const n=tv3.applyQuaternion(b.quat).clone();
+    player.pos.addScaledVector(n,pr-d);
+    const bodyV=b.kinematic?b.vel:b.vel;
+    const relx=player.vel.x-bodyV.x, rely=player.vel.y-bodyV.y, relz=player.vel.z-bodyV.z;
+    const vn=relx*n.x+rely*n.y+relz*n.z;
+    if(vn<0){
+      player.vel.addScaledVector(n,-vn);
+      const pm=player.sprint?3:1.5;
+      const point=new V3().copy(c).addScaledVector(n,-pr);
+      if(-vn>1.5){ const imp=n.clone().multiplyScalar(vn*pm); hitBody(b,imp,point); b.lastHitBy='me';
+        if(b.kind==='car'&&-vn>5) trick('CAR BUMP',30); else if(!b.npc&&-vn>5) trick('BODY SLAM',20); }
+      else if(Net.isHost&&!b.kinematic){ b.applyImpulse(n.clone().multiplyScalar(vn*pm*0.5),point); }
+    }
+    if(n.y>0.6){ player.grounded=true; player.pos.addScaledVector(bodyV,dt*0.9); }
+    // hit by a speeding prop
+    const bs=Math.hypot(bodyV.x,bodyV.z);
+    if(bs>7&&!b.kinematic&&b.vel.dot(n)>4){ enterRagdoll(new V3().copy(b.vel).multiplyScalar(1.1).add(new V3(0,6,0))); centerMsg('OUCH'); return; }
+  }
+}
+function collidePlayerStatics(){
+  const pr=0.45; const c=tv.copy(player.pos); c.y+=0.45;
+  for(const s of statics){
+    tv2.set(clamp(c.x,s.min.x,s.max.x),clamp(c.y,s.min.y,s.max.y),clamp(c.z,s.min.z,s.max.z));
+    tv3.subVectors(c,tv2); const d=tv3.length(); if(d>=pr) continue;
+    if(d<1e-4) continue; tv3.divideScalar(d);
+    player.pos.addScaledVector(tv3,pr-d); const vn=player.vel.dot(tv3); if(vn<0) player.vel.addScaledVector(tv3,-vn);
+    if(tv3.y>0.6) player.grounded=true;
+  }
+}
+function collidePlayerTrees(move,dt){
+  for(const t of trees){
+    const dx=player.pos.x-t.x, dz=player.pos.z-t.z, d=Math.hypot(dx,dz);
+    if(d<1e-4) continue;
+    // canopy platform
+    const topR=t.platR; if(d<topR&&player.pos.y<=t.platY+0.35&&player.pos.y>=t.platY-0.7&&player.vel.y<=0&&!player.climbing){ player.pos.y=t.platY; player.vel.y=0; player.grounded=true; }
+    if(player.climbing) continue;
+    const rr=t.r+0.42;
+    if(d<rr&&player.pos.y<t.h-0.2){
+      const nx=dx/d, nz=dz/d;
+      const toward=-(move.x*nx+move.z*nz);
+      if(toward>0.5&&move.lengthSq()>0.1){ player.climbing=t; player.climbAng=Math.atan2(dz,dx); player.vel.set(0,0,0); player.jumps=0; if(!t.scored){ t.scored=true; setTimeout(()=>t.scored=false,8000); trick('TREE CLIMB',10);} }
+      else { player.pos.x+=nx*(rr-d); player.pos.z+=nz*(rr-d); const vn=player.vel.x*nx+player.vel.z*nz; if(vn<0){ player.vel.x-=nx*vn; player.vel.z-=nz*vn; } }
+    }
+  }
+}
+function centerMsg(txt,sub){ const el=$('centerMsg'); el.hidden=false; el.textContent=txt; if(sub){ const s=document.createElement('small'); s.textContent=sub; el.appendChild(s);} clearTimeout(centerMsg.t); centerMsg.t=setTimeout(()=>el.hidden=true,1600); }
+
+function updatePlayer(dt,t){
+  const fwd=new V3(-Math.sin(cam.yaw),0,-Math.cos(cam.yaw)); const right=new V3(-fwd.z,0,fwd.x);
+  const ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0), iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0);
+  const move=new V3(fwd.x*iz+right.x*ix,0,fwd.z*iz+right.z*ix); if(move.lengthSq()>1) move.normalize();
+  player.sprint=!!keys['shift'];
+  player.headbuttT=Math.max(0,player.headbuttT-dt);
+  if(player.rag){
+    const b=player.rag; player.ragT+=dt;
+    stepBody(b,dt);
+    // rag vs bodies (sphere)
+    for(const o of bodies){ tv.subVectors(b.pos,o.pos); const d=tv.length(), rr=0.4+o.radius*0.6; if(d<rr&&d>1e-4){ tv.divideScalar(d); b.pos.addScaledVector(tv,rr-d); const vn=b.vel.dot(tv); if(vn<0) b.vel.addScaledVector(tv,-vn*1.2); } }
+    player.pos.copy(b.pos); player.pos.y-=0.4;
+    player.an=3;
+    if(player.ragT>1.6&&b.vel.lengthSq()<0.6&&b.pos.y<0.6) exitRagdoll();
+    return;
+  }
+  if(player.climbing){
+    const tr=player.climbing; const ax=Math.cos(player.climbAng), az=Math.sin(player.climbAng);
+    const toward=-(move.x*ax+move.z*az); // pushing into trunk = up
+    const side=move.x*(-az)+move.z*ax;
+    player.pos.y+=toward*4.5*dt;
+    player.climbAng+=side*1.6*dt;
+    if(move.lengthSq()>0.1&&toward<-0.6){ player.climbing=null; player.vel.set(ax*2,1,az*2); }
+    const nax=Math.cos(player.climbAng), naz=Math.sin(player.climbAng);
+    player.pos.x=tr.x+nax*(tr.r+0.36); player.pos.z=tr.z+naz*(tr.r+0.36);
+    if(player.pos.y<0.1){ player.pos.y=0; player.climbing=null; }
+    if(player.pos.y>tr.h-0.3&&player.climbing){ player.climbing=null; player.pos.y=tr.platY; player.pos.x=tr.x+nax*0.8; player.pos.z=tr.z+naz*0.8; player.vel.set(0,2,0); player.grounded=true; }
+    player.yaw=Math.atan2(-nax,-naz);
+    player.an=4; player.vel.set(0,0,0);
+    return;
+  }
+  const speed=player.sprint?10.5:6.2, accel=player.grounded?45:14;
+  player.vel.x=approach(player.vel.x,move.x*speed,accel*dt); player.vel.z=approach(player.vel.z,move.z*speed,accel*dt);
+  player.vel.y-=G*dt;
+  player.pos.addScaledVector(player.vel,dt);
+  const wasGrounded=player.grounded; player.grounded=false;
+  if(player.pos.y<=0){ player.pos.y=0; if(player.vel.y<0) player.vel.y=0; player.grounded=true; }
+  for(const p of pads){ const dx=player.pos.x-p.x, dz=player.pos.z-p.z; if(dx*dx+dz*dz<p.r*p.r){ if(player.pos.y<=p.y){ player.pos.y=p.y; if(player.vel.y<-2){ player.vel.y=Math.max(17,-player.vel.y*1.15); player.jumps=1; player.spinV=10; trick('BOING',15); beep(200,0.25,'sine',0.06); } else { if(player.vel.y<0) player.vel.y=0; player.grounded=true; } } } }
+  collidePlayerStatics(); collidePlayerBodies(dt); if(player.rag) return; collidePlayerTrees(move,dt); if(player.climbing) return;
+  player.pos.x=clamp(player.pos.x,-WORLD,WORLD); player.pos.z=clamp(player.pos.z,-WORLD,WORLD);
+  if(player.grounded){ if(!wasGrounded&&player.air>1.1) trick('AIR TIME',Math.floor(player.air*25)); player.air=0; player.jumps=0; player.coyote=0.12; player.spin=0; player.spinV=0; }
+  else { player.coyote-=dt; player.air+=dt; }
+  if(player.spinV>0){ player.spin+=player.spinV*dt; if(player.spin>Math.PI*2){ player.spin=0; player.spinV=0; } }
+  const hs=Math.hypot(player.vel.x,player.vel.z);
+  if(hs>0.6) player.yaw=Math.atan2(player.vel.x,player.vel.z);
+  player.an=player.grounded?(hs>0.5?1:0):2;
+  // acorns
+  for(const a of acorns){ if(a.taken){ if(t>a.taken+30){ a.taken=0; a.mesh.visible=true; } continue; } const dx=player.pos.x-a.x, dz=player.pos.z-a.z; if(dx*dx+dz*dz<0.9*0.9&&player.pos.y<1.2){ a.taken=Math.max(t,0.01); a.mesh.visible=false; player.score+=10; beep(900,0.08,'sine',0.04); flash('+10 acorn'); } }
+  // spook
+  for(const n of npcs){ if(n.spookCd>0){ n.spookCd-=dt; continue; } const mode=Net.isHost?(n.state==='rag'?1:0):remoteNpcMode[n.body.idx]; if(mode===0&&Math.hypot(n.body.pos.x-player.pos.x,n.body.pos.z-player.pos.z)<2.0){ n.spookCd=7; trick('SPOOKED',15); } }
+  // held prop follows tail
+  if(player.held){ const b=player.held; const f=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw)); const anchor=new V3().copy(player.pos).addScaledVector(f,-1.3); anchor.y+=1.1+b.half.y*0.5;
+    tv.copy(anchor).sub(b.pos); b.vel.copy(tv).divideScalar(Math.max(dt,0.001)).multiplyScalar(0.5); b.pos.lerp(anchor,Math.min(1,14*dt)); tq.setFromAxisAngle(UP,player.yaw); b.quat.slerp(tq,Math.min(1,6*dt)); b.angVel.set(0,0,0); }
+}
+let flashT=0; function flash(txt){ const el=document.createElement('div'); el.className='toast'; el.style.fontSize='16px'; el.style.color='var(--leaf)'; el.textContent=txt; const box=$('toasts'); box.appendChild(el); setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },1500); }
+
+// ---------------- camera ----------------
+function updateCamera(dt){
+  const target=tv.copy(player.pos); target.y+=0.9;
+  const cp=Math.cos(cam.pitch);
+  tv2.set(Math.sin(cam.yaw)*cp,Math.sin(cam.pitch),Math.cos(cam.yaw)*cp).multiplyScalar(cam.dist).add(target);
+  if(tv2.y<0.35) tv2.y=0.35;
+  if(cam.pos.lengthSq()===0) cam.pos.copy(tv2); else cam.pos.lerp(tv2,Math.min(1,12*dt));
+  camera.position.copy(cam.pos); camera.lookAt(target);
+  sun.position.set(player.pos.x+30,60,player.pos.z+20); sun.target.position.set(player.pos.x,0,player.pos.z); sun.target.updateMatrixWorld();
+}
+
+// ---------------- networking ----------------
+const Net={kind:'none',mode:'solo',isHost:true,code:'',myId:'me',remotes:new Map(),room:null,named:null,peer:null,conns:[],lobbyGames:[],lastHostSeen:0,connected:false,unsubs:[]};
+function setStatus(txt,err){ const el=$('status'); el.textContent=txt||''; el.classList.toggle('err',!!err); }
+function genCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
+async function detectNet(){
+  if(window.claude&&typeof window.claude.use==='function'){
+    setStatus('Checking online play…');
+    let room=null; try{ room=await window.claude.use('room'); }catch(e){ room=null; }
+    if(room){ Net.kind='room'; Net.room=room; setupLobby(); setStatus(''); }
+    else { Net.kind='none'; setStatus(''); }
+  } else if(typeof Peer!=='undefined'){ Net.kind='peer'; }
+  else Net.kind='none';
+  refreshMenu();
+}
+function setupLobby(){
+  const room=Net.room;
+  room.onPeers(ch=>{ Net.lobbyGames=ch.peers.filter(p=>!p.sameTab&&p.presence&&typeof p.presence.hosting==='string').map(p=>({code:String(p.presence.hosting).slice(0,4),name:String(p.presence.nick||'Someone').slice(0,14)})); renderGames(); },()=>{});
+  room.presence({nick:player.name,hosting:null}).catch(()=>{});
+}
+function renderGames(){
+  const el=$('games'); el.innerHTML='';
+  if(Net.kind!=='room'||Net.mode!=='solo') return;
+  for(const g of Net.lobbyGames.slice(0,6)){
+    const row=document.createElement('div'); row.className='g';
+    const span=document.createElement('span'); span.textContent=g.name+' is hosting '; const b=document.createElement('b'); b.textContent=g.code; span.appendChild(b); row.appendChild(span);
+    const btn=document.createElement('button'); btn.type='button'; btn.textContent='Join'; btn.addEventListener('click',()=>joinGame(g.code)); row.appendChild(btn); el.appendChild(row);
+  }
+}
+function refreshMenu(){
+  const online=Net.kind==='room'||Net.kind==='peer';
+  $('hostBtn').disabled=!online; $('joinBtn').disabled=!online; $('codeIn').disabled=!online;
+  const note=$('netNote');
+  if(Net.kind==='room') note.innerHTML='<b>This page:</b> your friend opens this same link while signed in to Claude (share it from the share menu). Open games appear below.';
+  else if(Net.kind==='peer') note.innerHTML='<b>This file:</b> send the same HTML file to your friend. The connection is peer-to-peer; the code goes through a public matchmaking server.';
+  else if(window.claude) note.innerHTML='<b>Online play is unavailable for you here</b> (not signed in, or opened from a public link). Solo play still works.';
+  else note.innerHTML='<b>Online play unavailable:</b> the networking library did not load. Solo play still works.';
+  renderGames();
+}
+function ensureRemote(id){ let r=Net.remotes.get(id); if(!r){ r={id,st:null,t:0,lastSeq:0,mesh:null,color:-1,pos:new V3(),yaw:0,heldIdx:-1,spin:0}; Net.remotes.set(id,r); } return r; }
+function removeRemote(id){ const r=Net.remotes.get(id); if(!r) return; if(r.mesh) scene.remove(r.mesh.holder); for(const b of bodies) if(b.held===id) b.held=null; Net.remotes.delete(id); }
+function wireNamed(named){
+  Net.named=named;
+  Net.unsubs.push(named.onPeers(ch=>{
+    for(const p of ch.peers){ if(p.sameTab){ Net.myId=p.peer; continue; } const st=p.presence; if(st&&st.v===1){ const r=ensureRemote(p.peer); r.st=st; r.t=performance.now(); } }
+    for(const p of ch.left) removeRemote(p.peer);
+  },e=>{ setStatus('Room error: '+e.code,true); setNetTxt(false,'Room error: '+e.code); }));
+  Net.unsubs.push(named.onConnection(c=>{ Net.connected=c; setNetTxt(c,c?'Connected':'Reconnecting…'); },()=>{}));
+}
+function setNetTxt(on,txt){ const el=$('netTxt'); el.classList.toggle('on',!!on); el.innerHTML='<i></i>'; el.appendChild(document.createTextNode(txt)); }
+async function hostGame(){
+  const code=genCode(); Net.code=code; Net.isHost=true; Net.mode='online'; Net.lastHostSeen=performance.now();
+  if(Net.kind==='room'){
+    try{ const named=await Net.room.join('sq-'+code.toLowerCase()); wireNamed(named); Net.room.presence({hosting:code,nick:player.name}).catch(()=>{}); }
+    catch(e){ setStatus('Could not open a room ('+(e&&e.code||'error')+').',true); Net.mode='solo'; return false; }
+  } else if(Net.kind==='peer'){
+    await new Promise((res)=>{
+      const p=new Peer('sqsim-'+code.toLowerCase()); Net.peer=p;
+      p.on('open',()=>{ setNetTxt(true,'Waiting for a player…'); res(true); });
+      p.on('connection',c=>{ if(Net.conns.length>=1){ c.on('open',()=>c.close()); return; } wireConn(c); });
+      p.on('error',e=>{ setStatus('Connection problem: '+e.type,true); setNetTxt(false,'Error: '+e.type); res(false); });
+    });
+  }
+  return true;
+}
+async function joinGameNet(code){
+  Net.code=code; Net.isHost=false; Net.mode='online'; Net.lastHostSeen=performance.now();
+  if(Net.kind==='room'){
+    try{ const named=await Net.room.join('sq-'+code.toLowerCase()); wireNamed(named); }
+    catch(e){ setStatus('Could not join ('+(e&&e.code||'error')+').',true); Net.mode='solo'; return false; }
+  } else if(Net.kind==='peer'){
+    const ok=await new Promise((res)=>{
+      const p=new Peer(); Net.peer=p;
+      p.on('open',()=>{ const c=p.connect('sqsim-'+code.toLowerCase(),{serialization:'json'}); wireConn(c,res); setNetTxt(false,'Connecting…'); });
+      p.on('error',e=>{ if(e.type==='peer-unavailable') setStatus('No game found with code '+code+'.',true); else setStatus('Connection problem: '+e.type,true); res(false); });
+    });
+    if(!ok){ Net.mode='solo'; Net.isHost=true; if(Net.peer){ try{Net.peer.destroy();}catch(e){} Net.peer=null; } return false; }
+  }
+  return true;
+}
+function wireConn(c,res){
+  c.on('open',()=>{ Net.conns.push(c); Net.connected=true; setNetTxt(true,'Connected'); if(res) res(true); });
+  c.on('data',d=>{ if(!d||d.v!==1) return; const r=ensureRemote(c.peer); r.st=d; r.t=performance.now(); });
+  c.on('close',()=>{ Net.conns=Net.conns.filter(x=>x!==c); removeRemote(c.peer); Net.connected=Net.conns.length>0; setNetTxt(false,'Other player left'); if(!Net.isHost) becomeHost(); });
+  c.on('error',()=>{ if(res) res(false); });
+}
+function becomeHost(){ if(Net.isHost) return; Net.isHost=true; for(const b of bodies){ b.pos.copy(b.tPos); b.quat.copy(b.tQuat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.wake(); if(b.npc){ b.kinematic=remoteNpcMode[b.idx]===0; b.npc.state=b.kinematic?'walk':'rag'; } } centerMsg('You are now the host'); }
+function leaveNet(){
+  for(const u of Net.unsubs){ try{u();}catch(e){} } Net.unsubs=[];
+  if(Net.named){ try{ Net.named.leave(); }catch(e){} Net.named=null; }
+  if(Net.room){ Net.room.presence({hosting:null}).catch(()=>{}); }
+  if(Net.peer){ try{ Net.peer.destroy(); }catch(e){} Net.peer=null; } Net.conns=[];
+  for(const id of Array.from(Net.remotes.keys())) removeRemote(id);
+  Net.mode='solo'; Net.isHost=true; Net.code=''; Net.connected=false;
+  for(const b of bodies){ b.held=null; if(b.npc&&!b.kinematic&&b.npc.state!=='rag'){ b.kinematic=true; } }
+  setNetTxt(false,'Solo'); $('codeBox').hidden=true;
+}
+function packState(){
+  const st={v:1,nm:player.name,c:player.color,p:[r2(player.pos.x),r2(player.pos.y),r2(player.pos.z)],ry:r2(player.yaw),an:player.an,sc:player.score,host:Net.isHost?1:0,held:player.held?player.held.idx:-1,hits:myHits,sp:r2(player.spin),rq:null,b:null,nm2:null};
+  if(player.rag){ const q=player.rag.quat; st.rq=[r3(q.x),r3(q.y),r3(q.z),r3(q.w)]; }
+  if(Net.isHost){ st.b=bodies.map(b=>[r2(b.pos.x),r2(b.pos.y),r2(b.pos.z),r3(b.quat.x),r3(b.quat.y),r3(b.quat.z),r3(b.quat.w)]); st.nm2=npcs.map(n=>n.state==='rag'?1:(n.state==='flee'?2:0)); }
+  return st;
+}
+let lastSend=0;
+function netTick(now,dt){
+  if(Net.mode!=='online') return;
+  // apply remote state
+  let hostSeen=false;
+  for(const [id,r] of Net.remotes){
+    if(now-r.t>8000){ removeRemote(id); continue; }
+    const st=r.st; if(!st) continue;
+    if(st.host){ hostSeen=true; Net.lastHostSeen=now;
+      if(!Net.isHost&&Array.isArray(st.b)){
+        for(let i=0;i<bodies.length&&i<st.b.length;i++){ const a=st.b[i]; if(!Array.isArray(a)||a.length<7) continue; const b=bodies[i]; b.tPos.set(+a[0]||0,+a[1]||0,+a[2]||0); b.tQuat.set(+a[3]||0,+a[4]||0,+a[5]||0,+a[6]||1).normalize(); }
+        if(Array.isArray(st.nm2)) for(let i=0;i<npcs.length;i++){ const bi=npcs[i].body.idx, nm=st.nm2[i]|0;
+          if(nm===1&&remoteNpcMode[bi]!==1){ // a pedestrian just went down: was it one of my flung props?
+            const nb=npcs[i].body; for(const o of bodies){ if(o.lastHitBy==='me'&&now-(o.lastHitT||0)<4000&&o.pos.distanceTo(nb.pos)<3){ trick('BOWLED PEDESTRIAN',100); o.lastHitBy=null; break; } } }
+          remoteNpcMode[bi]=nm; }
+      }
+    }
+    if(Net.isHost){
+      // held props
+      const h=typeof st.held==='number'?st.held:-1;
+      if(r.heldIdx!==h){ if(r.heldIdx>=0&&bodies[r.heldIdx]&&bodies[r.heldIdx].held===id) bodies[r.heldIdx].held=null; r.heldIdx=h; if(h>=0&&bodies[h]&&!bodies[h].held){ bodies[h].held=id; bodies[h].wake(); if(bodies[h].npc&&bodies[h].npc.state!=='rag') ragdollNPC(bodies[h].npc,null,null); } }
+      if(h>=0&&bodies[h]&&bodies[h].held===id&&Array.isArray(st.p)){ const b=bodies[h]; const ry=+st.ry||0; const anchor=new V3(+st.p[0]-Math.sin(ry)*1.3,+st.p[1]+1.1+b.half.y*0.5,+st.p[2]-Math.cos(ry)*1.3); tv.copy(anchor).sub(b.pos); b.vel.copy(tv).divideScalar(Math.max(dt,0.001)).multiplyScalar(0.5); b.pos.lerp(anchor,Math.min(1,14*dt)); tq.setFromAxisAngle(UP,ry); b.quat.slerp(tq,Math.min(1,6*dt)); b.angVel.set(0,0,0); }
+      // hits
+      if(Array.isArray(st.hits)) for(const hh of st.hits){ if(!Array.isArray(hh)||hh.length<8) continue; const seq=+hh[0]; if(seq<=r.lastSeq) continue; r.lastSeq=seq; const b=bodies[hh[1]|0]; if(!b||b.held) continue; const imp=new V3(+hh[2]||0,+hh[3]||0,+hh[4]||0); if(imp.length()>200) imp.setLength(200); const pt=new V3(+hh[5]||0,+hh[6]||0,+hh[7]||0); if(b.npc&&b.npc.state!=='rag'&&imp.length()>2.5) ragdollNPC(b.npc,imp,null); else b.applyImpulse(imp,pt); b.lastHitBy=id; }
+    }
+  }
+  if(!Net.isHost&&!hostSeen&&now-Net.lastHostSeen>4000){
+    // nobody hosting: the lowest peer label takes over
+    const ids=Array.from(Net.remotes.keys()); ids.push(Net.myId); ids.sort();
+    if(ids[0]===Net.myId||Net.kind==='peer'){ becomeHost(); Net.lastHostSeen=now; }
+  }
+  if(now-lastSend>50){ lastSend=now; const st=packState();
+    if(Net.kind==='room'&&Net.named){ Net.named.presence(st).catch(()=>{}); }
+    else if(Net.kind==='peer'){ for(const c of Net.conns){ if(c.open){ try{ c.send(st); }catch(e){} } } }
+  }
+}
+function updateRemotes(dt,t){
+  for(const r of Net.remotes.values()){
+    const st=r.st; if(!st||!Array.isArray(st.p)) continue;
+    const ci=clamp(st.c|0,0,FURS.length-1);
+    if(!r.mesh||r.color!==ci){ if(r.mesh) scene.remove(r.mesh.holder); r.mesh=makeSquirrel(FURS[ci].c); r.color=ci; scene.add(r.mesh.holder); r.pos.set(+st.p[0],+st.p[1],+st.p[2]); }
+    tv.set(+st.p[0]||0,+st.p[1]||0,+st.p[2]||0);
+    const sp=tv.distanceTo(r.pos)/Math.max(dt,0.001);
+    r.pos.lerp(tv,Math.min(1,14*dt));
+    const ry=+st.ry||0; let dy=ry-r.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); r.yaw+=dy*Math.min(1,14*dt);
+    const h=r.mesh.holder; h.position.copy(r.pos); h.position.y+=0.4;
+    const an=st.an|0;
+    if(an===3&&Array.isArray(st.rq)){ tq.set(+st.rq[0],+st.rq[1],+st.rq[2],+st.rq[3]).normalize(); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
+    else if(an===4){ tq.setFromAxisAngle(UP,r.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
+    else { tq.setFromAxisAngle(UP,r.yaw); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
+    animSquirrel(r.mesh,an,Math.min(sp,12),t,dt,+st.sp||0);
+  }
+}
+
+// ---------------- HUD ----------------
+let hudT=0;
+function updateHUD(){
+  $('scoreNum').textContent=player.score.toLocaleString();
+  const el=$('players'); el.innerHTML='';
+  const row=(name,score,color,isHost,me)=>{ const d=document.createElement('div'); d.className='row'; const l=document.createElement('span'); l.className='nm'; const dot=document.createElement('i'); dot.className='dot'; dot.style.background='#'+FURS[color].c.toString(16).padStart(6,'0'); l.appendChild(dot); l.appendChild(document.createTextNode(name+(me?' (you)':''))); if(isHost){ const hb=document.createElement('span'); hb.className='host'; hb.textContent='HOST'; l.appendChild(hb);} const s=document.createElement('span'); s.textContent=score.toLocaleString(); d.appendChild(l); d.appendChild(s); el.appendChild(d); };
+  row(player.name,player.score,player.color,Net.mode==='online'&&Net.isHost,true);
+  for(const r of Net.remotes.values()){ if(!r.st) continue; row(String(r.st.nm||'Squirrel').slice(0,14),(+r.st.sc||0),clamp(r.st.c|0,0,FURS.length-1),!!r.st.host,false); }
+  if(Net.mode==='online'&&Net.remotes.size===0){ const d=document.createElement('div'); d.className='row'; d.style.color='var(--muted)'; d.textContent='Waiting for a friend…'; el.appendChild(d); }
+}
+
+// ---------------- input ----------------
+let menuOpen=true;
+function showMenu(open){ menuOpen=open; $('menu').hidden=!open; $('hud').hidden=open; if(open){ if(document.pointerLockElement) document.exitPointerLock(); } else canvas.focus(); if(open&&Net.room) Net.room.presence({nick:player.name,hosting:Net.mode==='online'&&Net.isHost?Net.code:null}).catch(()=>{}); renderGames(); }
+window.addEventListener('keydown',e=>{
+  const k=e.key.toLowerCase();
+  if(e.target&&e.target.tagName==='INPUT') return;
+  if(k==='escape'){ if(!document.pointerLockElement){ showMenu(!menuOpen); } return; }
+  if(menuOpen) return;
+  keys[k]=true;
+  if(k===' '){ e.preventDefault(); jump(); }
+  if(k==='f') headbutt();
+  if(k==='e') tailGrab();
+  if(k==='r'){ if(player.rag){ if(player.ragT>0.5) exitRagdoll(); } else enterRagdoll(new V3().copy(player.vel).add(new V3(0,3,0))); }
+  if(k==='h') $('hint').hidden=!$('hint').hidden;
+  if(['arrowup','arrowdown','arrowleft','arrowright'].includes(k)) e.preventDefault();
+});
+window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
+window.addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; });
+let dragging=false, lastMX=0, lastMY=0;
+canvas.addEventListener('mousedown',e=>{
+  if(menuOpen) return;
+  if(e.button===0){
+    if(!document.pointerLockElement){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(err){} dragging=true; lastMX=e.clientX; lastMY=e.clientY; }
+    else headbutt();
+  } else if(e.button===2){ tailGrab(); }
+});
+window.addEventListener('mouseup',()=>{ dragging=false; });
+canvas.addEventListener('contextmenu',e=>e.preventDefault());
+window.addEventListener('mousemove',e=>{
+  if(menuOpen) return;
+  let dx=0,dy=0;
+  if(document.pointerLockElement===canvas){ dx=e.movementX; dy=e.movementY; }
+  else if(dragging){ dx=e.clientX-lastMX; dy=e.clientY-lastMY; lastMX=e.clientX; lastMY=e.clientY; }
+  else return;
+  cam.yaw-=dx*0.0028; cam.pitch=clamp(cam.pitch+dy*0.0028,-0.2,1.2);
+});
+canvas.addEventListener('wheel',e=>{ e.preventDefault(); cam.dist=clamp(cam.dist+Math.sign(e.deltaY)*0.6,3,13); },{passive:false});
+document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement===canvas) dragging=false; });
+$('menuBtn').addEventListener('click',()=>showMenu(true));
+
+// menu wiring
+const sw=$('swatches');
+FURS.forEach((f,i)=>{ const b=document.createElement('button'); b.type='button'; b.className='swatch'; b.setAttribute('role','radio'); b.setAttribute('aria-label',f.n+' fur'); b.title=f.n; b.style.background='#'+f.c.toString(16).padStart(6,'0'); b.addEventListener('click',()=>{ setFur(i); sw.querySelectorAll('.swatch').forEach((s,j)=>s.setAttribute('aria-checked',String(j===i))); }); sw.appendChild(b); });
+let savedFur=0, savedName='';
+try{ savedFur=clamp(parseInt(localStorage.getItem('sq_fur')||'0',10)||0,0,FURS.length-1); savedName=localStorage.getItem('sq_name')||''; }catch(e){}
+setFur(savedFur); sw.querySelectorAll('.swatch').forEach((s,j)=>s.setAttribute('aria-checked',String(j===savedFur)));
+$('nameIn').value=savedName;
+function readName(){ const v=$('nameIn').value.trim().slice(0,14)||'Nutsy'; player.name=v; try{ localStorage.setItem('sq_name',v); }catch(e){} return v; }
+function startPlay(){ showMenu(false); if(Net.mode==='online'){ $('codeBox').hidden=false; $('codeTxt').textContent=Net.code; } else $('codeBox').hidden=true; updateHUD(); }
+$('soloBtn').addEventListener('click',()=>{ readName(); if(Net.mode==='online') leaveNet(); setStatus(''); startPlay(); });
+$('hostBtn').addEventListener('click',async()=>{ readName(); if(Net.mode==='online') leaveNet(); $('hostBtn').disabled=true; setStatus('Opening a game…'); const ok=await hostGame(); $('hostBtn').disabled=false; if(ok){ setStatus(''); startPlay(); centerMsg('Game code: '+Net.code,'Tell your friend to join with it'); if(Net.kind==='room') setNetTxt(true,'Waiting for a player…'); } });
+async function joinGame(code){ readName(); code=(code||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(code.length!==4){ setStatus('Codes are 4 letters or digits.',true); return; } if(Net.mode==='online') leaveNet(); $('joinBtn').disabled=true; setStatus('Joining '+code+'…'); const ok=await joinGameNet(code); $('joinBtn').disabled=false; if(ok){ setStatus(''); startPlay(); if(Net.kind==='room') setNetTxt(true,'Looking for the host…'); } }
+$('joinBtn').addEventListener('click',()=>joinGame($('codeIn').value));
+$('codeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') joinGame($('codeIn').value); });
+$('nameIn').addEventListener('change',()=>{ readName(); if(Net.room) Net.room.presence({nick:player.name}).catch(()=>{}); });
+
+// ---------------- main loop ----------------
+let last=performance.now(), t0=last;
+function resize(){ const w=canvas.clientWidth, h=canvas.clientHeight; if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(0.033,(now-last)/1000); last=now; const t=(now-t0)/1000;
+  resize();
+  if(!menuOpen) updatePlayer(dt,t);
+  if(Net.isHost){
+    for(const b of bodies) stepBody(b,dt);
+    collideBodies(dt);
+    updateNPCs(dt);
+  } else {
+    for(const b of bodies){ if(b.held==='me') continue; tv.copy(b.pos); b.pos.lerp(b.tPos,Math.min(1,12*dt)); b.quat.slerp(b.tQuat,Math.min(1,12*dt)); b.vel.subVectors(b.pos,tv).divideScalar(Math.max(dt,0.001)); }
+  }
+  netTick(now,dt);
+  // meshes
+  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=Net.isHost?(b.npc.state==='rag'?1:(b.npc.state==='flee'?2:0)):remoteNpcMode[b.idx]; const sp=Net.isHost?b.vel.length():b.pos.distanceTo(b.tPos)*12; animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); } }
+  for(const a of acorns){ if(!a.taken){ a.mesh.position.y=0.35+Math.sin(t*2+a.phase)*0.06; a.mesh.rotation.y=t+a.phase; } }
+  // my squirrel
+  const m=player.mesh, h=m.holder; h.position.copy(player.pos); h.position.y+=0.4;
+  if(player.rag){ h.quaternion.copy(player.rag.quat); }
+  else if(player.climbing){ tq.setFromAxisAngle(UP,player.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,16*dt)); }
+  else { tq.setFromAxisAngle(UP,player.yaw); if(player.headbuttT>0){ tq2.setFromAxisAngle(new V3(1,0,0),Math.sin(player.headbuttT/0.25*Math.PI)*0.9); tq.multiply(tq2); } h.quaternion.slerp(tq,Math.min(1,16*dt)); }
+  animSquirrel(m,player.an,Math.hypot(player.vel.x,player.vel.z),t,dt,player.spin);
+  updateRemotes(dt,t);
+  updateCamera(dt);
+  hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
+  renderer.render(scene,camera);
+}
+window.__sq={player,bodies,npcs,trees,headbutt,tailGrab,enterRagdoll,Net,cam};
+requestAnimationFrame(frame);
+detectNet();
+})();
+</script>
+
+</body>
+</html>
