@@ -315,7 +315,7 @@ function stepBody(b,dt){
   const w=b.angVel.length();
   if(w>1e-4){ tq.setFromAxisAngle(tv.copy(b.angVel).divideScalar(w),w*dt); b.quat.premultiply(tq).normalize(); }
   let maxPen=0, grounded=false;
-  for(const p of pads){ const dx=b.pos.x-p.x, dz=b.pos.z-p.z; if(dx*dx+dz*dz<p.r*p.r && b.pos.y-b.half.y<p.y && b.vel.y<-1){ b.vel.y=Math.max(13,-b.vel.y*1.1); b.angVel.x+=(rng()-0.5)*6; b.angVel.z+=(rng()-0.5)*6; } }
+  for(const p of pads){ const dx=b.pos.x-p.x, dz=b.pos.z-p.z; if(dx*dx+dz*dz<p.r*p.r && b.pos.y-b.half.y<p.y && b.vel.y<-1){ b.vel.y=Math.max(13,-b.vel.y*1.1); b.angVel.x+=(srng()-0.5)*6; b.angVel.z+=(srng()-0.5)*6; } }
   for(const c of corners){
     tv.set(c[0]*b.half.x,c[1]*b.half.y,c[2]*b.half.z).applyQuaternion(b.quat);
     const wy=b.pos.y+tv.y;
@@ -350,7 +350,7 @@ function stepBody(b,dt){
     if(d<r){
       if(d<1e-4){ tv2.subVectors(b.pos,s.c); tv2.y=0; if(tv2.lengthSq()<1e-6) tv2.set(1,0,0); tv2.normalize(); } else tv2.divideScalar(d);
       b.pos.addScaledVector(tv2,r-d);
-      const vn=b.vel.dot(tv2); if(vn<0){ b.vel.addScaledVector(tv2,-vn*1.3); b.angVel.x+=(rng()-0.5)*2; b.angVel.z+=(rng()-0.5)*2; }
+      const vn=b.vel.dot(tv2); if(vn<0){ b.vel.addScaledVector(tv2,-vn*1.3); b.angVel.x+=(srng()-0.5)*2; b.angVel.z+=(srng()-0.5)*2; }
     }
   }
   if(grounded) b.angVel.multiplyScalar(1-3*dt); else b.angVel.multiplyScalar(1-0.4*dt);
@@ -638,7 +638,7 @@ function nameplate(g,text,fg,bg){ const s=signPlane(text,1.4,fg,bg); s.position.
   whimsy.debate={x:DX,z:DZ}; }
 
 // ---------------- Squirrel International Airport ----------------
-const PLANE={x:112,y:0,z:20,yaw:0,pitch:0,group:null,statics:[],flightStart:0,aboard:false,boardCd:0,flownCd:0,last:new V3(112,0,20)};
+const PLANE={x:112,y:0,z:20,yaw:0,pitch:0,group:null,statics:[],flightTick:0,last:new V3(112,0,20)};
 { const rw=new THREE.Mesh(new THREE.PlaneGeometry(16,230),new THREE.MeshLambertMaterial({color:0x50505a})); rw.rotation.x=-Math.PI/2; rw.position.set(112,0.012,0); rw.receiveShadow=true; scene.add(rw);
   for(let z=-110;z<=110;z+=8){ const d=new THREE.Mesh(new THREE.PlaneGeometry(0.5,4),new THREE.MeshLambertMaterial({color:0xffffff})); d.rotation.x=-Math.PI/2; d.position.set(112,0.02,z); scene.add(d); }
   for(const x of [104.5,119.5]) for(let z=-110;z<=110;z+=12){ const l=new THREE.Mesh(new THREE.SphereGeometry(0.12,6,4),new THREE.MeshBasicMaterial({color:z%24?0xffffff:0x4aa3ff})); l.position.set(x,0.15,z); scene.add(l); }
@@ -691,30 +691,29 @@ function planePose(e){ // elapsed seconds -> {x,y,z,yaw,pitch}
 }
 function updatePlane(dt){
   let pose=null;
-  if(PLANE.flightStart){ const e=(Date.now()-PLANE.flightStart)/1000; pose=planePose(e); if(!pose){ PLANE.flightStart=0; pose={x:112,y:0,z:20,yaw:0,pitch:0}; if(PLANE.aboard&&performance.now()>PLANE.flownCd){ PLANE.flownCd=performance.now()+60000; trick('FREQUENT FLYER',500); centerMsg('LANDED','thank you for flying Air Squirrel'); } } }
+  if(PLANE.flightTick>0){ const e=(simTick-PLANE.flightTick)*TICK; pose=planePose(e); if(!pose){ PLANE.flightTick=0; pose={x:112,y:0,z:20,yaw:0,pitch:0}; for(const P of players){ if(P.active&&P.aboard&&simNow()>P.flownCd){ P.flownCd=simNow()+60000; const save=player; player=P; trick('FREQUENT FLYER',500); centerMsg('LANDED','thank you for flying Air Squirrel'); player=save; } } } }
   const nx=pose?pose.x:112, ny=pose?pose.y:0, nz=pose?pose.z:20;
   const dx=nx-PLANE.x, dy=ny-PLANE.y, dz=nz-PLANE.z;
-  const lx=player.pos.x-PLANE.x, ly=player.pos.y-PLANE.y, lz=player.pos.z-PLANE.z;
-  PLANE.aboard=Math.abs(lx)<2.3&&lz>-12.5&&lz<12.5&&ly>1.4&&ly<5.6;
-  if(PLANE.aboard&&performance.now()>PLANE.boardCd){ PLANE.boardCd=performance.now()+60000; trick('BOARDED',100); centerMsg('WELCOME ABOARD','cockpit is up front. press E there.'); }
+  for(const P of players){ if(!P.active) continue; const lx=P.pos.x-PLANE.x, ly=P.pos.y-PLANE.y, lz=P.pos.z-PLANE.z;
+    P.aboard=Math.abs(lx)<2.3&&lz>-12.5&&lz<12.5&&ly>1.4&&ly<5.6;
+    if(P.aboard&&simNow()>P.boardCd){ P.boardCd=simNow()+60000; const save=player; player=P; trick('BOARDED',100); centerMsg('WELCOME ABOARD','cockpit is up front. press E there.'); player=save; } }
   if(dx||dy||dz){
     PLANE.x=nx; PLANE.y=ny; PLANE.z=nz;
     for(const ps of PLANE.statics){ const s=ps.s; const hx=s.max.x-s.c.x, hy=s.max.y-s.c.y, hz=s.max.z-s.c.z; s.c.set(nx+ps.x,ny+ps.y,nz+ps.z); s.min.set(s.c.x-hx,s.c.y-hy,s.c.z-hz); s.max.set(s.c.x+hx,s.c.y+hy,s.c.z+hz); }
-    if(PLANE.aboard){ player.pos.x+=dx; player.pos.y+=dy; player.pos.z+=dz; if(player.rag){ player.rag.pos.x+=dx; player.rag.pos.y+=dy; player.rag.pos.z+=dz; } }
-    if(Net.isHost) for(const r of PLANE.riders){ const b=r.n.body; if(r.n.state==='idle'){ b.pos.set(nx+r.x,ny+r.y+b.half.y,nz+r.z); } }
+    for(const P of players){ if(P.active&&P.aboard){ P.pos.x+=dx; P.pos.y+=dy; P.pos.z+=dz; if(P.rag){ P.rag.pos.x+=dx; P.rag.pos.y+=dy; P.rag.pos.z+=dz; } } }
+    for(const r of PLANE.riders){ const b=r.n.body; if(r.n.state==='idle'){ b.pos.set(nx+r.x,ny+r.y+b.half.y,nz+r.z); } }
   }
   PLANE.yaw=pose?pose.yaw:0; PLANE.pitch=pose?pose.pitch:0;
   PLANE.group.position.set(PLANE.x,PLANE.y,PLANE.z); PLANE.group.rotation.set(0,0,0);
-  if(PLANE.flightStart){ PLANE.group.rotation.y=PLANE.yaw; PLANE.group.rotation.x=PLANE.pitch; }
+  if(PLANE.flightTick>0){ PLANE.group.rotation.y=PLANE.yaw; PLANE.group.rotation.x=PLANE.pitch; }
 }
 function tryFly(){
   const lx=player.pos.x-PLANE.x, lz=player.pos.z-PLANE.z, ly=player.pos.y-PLANE.y;
   if(!(Math.abs(lx)<2.3&&lz<-8&&lz>-12&&ly>1.4&&ly<5.6)) return false;
-  if(PLANE.flightStart) { centerMsg('ALREADY FLYING','sit back and relax'); return true; }
-  if(Net.isHost){ PLANE.flightStart=Date.now()-200; } else { PLANE.flyRequest=Date.now(); }
+  if(PLANE.flightTick>0) { centerMsg('ALREADY FLYING','sit back and relax'); return true; }
+  PLANE.flightTick=Math.max(1,simTick);
   centerMsg('TAKEOFF','buckle up'); beep(220,0.6,'sawtooth',0.06); return true;
 }
-
 // ---------------- parties, campuses, companies, the mothership ----------------
 function makeParty(o){ const p=Object.assign({tiles:[],lights:[],strobe:null,beams:null,ball:null,inside:false,enteredAt:-1e9,vibeT:0,pal:CLUBPAL},o); PARTIES.push(p); return p; }
 function danceTiles(g,cx,cz,cols,rows,size,pal,y){ const out=[]; for(let i=0;i<cols;i++) for(let j=0;j<rows;j++){ const m=new THREE.Mesh(new THREE.PlaneGeometry(size-0.1,size-0.1),new THREE.MeshBasicMaterial({color:pal[(i+j)%pal.length]})); m.rotation.x=-Math.PI/2; m.position.set(cx-(cols-1)*size/2+i*size,y||0.04,cz-(rows-1)*size/2+j*size); g.add(m); out.push({m,i,j}); } return out; }
@@ -914,12 +913,10 @@ function makeWar(){
   ZONES.push({name:'WAR CORRESPONDENT',pts:60,x:WAR.x,z:WAR.z,hx:45,hz:15,y0:-1,y1:6,cd:0});
 }
 function updateWar(dt,t){
-  for(const sm of WAR.smoke){ sm.g.children.forEach((s,k)=>{ s.position.y=((k*1.3+t*1.2+sm.ph)%7); s.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s.material.opacity=0.45*(1-s.position.y/7); }); }
-  if(!Net.isHost) return;
   WAR.shotT+=dt;
-  if(WAR.shotT>3.5){ WAR.shotT=0; const near=WAR.soldiers.filter(n=>n.state==='war'&&Math.abs(n.body.pos.z-WAR.z)<5); if(near.length){ const v=near[Math.floor(rng()*near.length)]; ragdollNPC(v,new V3((rng()-0.5)*8,4,-v.side*6).multiplyScalar(v.body.mass),null); } }
+  if(WAR.shotT>3.5){ WAR.shotT=0; const near=WAR.soldiers.filter(n=>n.state==='war'&&Math.abs(n.body.pos.z-WAR.z)<5); if(near.length){ const v=near[Math.floor(srng()*near.length)]; ragdollNPC(v,new V3((srng()-0.5)*8,4,-v.side*6).multiplyScalar(v.body.mass),null); } }
   for(const c of WAR.cannons){ c.t+=dt; c.flash.material.opacity=Math.max(0,c.flash.material.opacity-dt*3);
-    if(c.t>7+rng()*2){ c.t=0; const ball=WAR.balls.find(b=>b.asleep||b.pos.y<0.5)||WAR.balls[0]; ball.held=null; ball.wake(); ball.pos.set(c.x,1.3,c.z); const tx=WAR.x+(rng()-0.5)*50, tz=WAR.z-c.side*(4+rng()*8); const T=1.8; ball.vel.set((tx-ball.pos.x)/T,(0.5*G*T*T-1)/T,(tz-ball.pos.z)/T); ball.angVel.set(5,0,5); ball.lastHitBy=null; c.flash.material.opacity=1; c.flash.scale.setScalar(1+rng()); if(Math.hypot(player.pos.x-c.x,player.pos.z-c.z)<60) beep(60,0.5,'sawtooth',0.08); } }
+    if(c.t>7+srng()*2){ c.t=0; const ball=WAR.balls.find(b=>b.asleep||b.pos.y<0.5)||WAR.balls[0]; ball.held=null; ball.wake(); ball.pos.set(c.x,1.3,c.z); const tx=WAR.x+(srng()-0.5)*50, tz=WAR.z-c.side*(4+srng()*8); const T=1.8; ball.vel.set((tx-ball.pos.x)/T,(0.5*G*T*T-1)/T,(tz-ball.pos.z)/T); ball.angVel.set(5,0,5); ball.lastHitBy=null; c.flash.material.opacity=1; c.flash.scale.setScalar(1+srng()); if(Math.hypot(players[localSlot].pos.x-c.x,players[localSlot].pos.z-c.z)<60) beep(60,0.5,'sawtooth',0.08); } }
 }
 
 // ---------------- Kendrick Lamar, north field ----------------
@@ -1101,22 +1098,34 @@ Music.playRap=function(i,t){
   if(k===2||k===9){ const o=ac.createOscillator(); o.type='square'; o.frequency.value=330*Math.pow(2,(k===2?0:3)/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1200; o.connect(f); this.env(f,t,0.01,0.05,0.18); o.start(t); o.stop(t+0.22); }
 };
 function beatTime(){ return (ac&&Music.gain)?(ac.currentTime-Music.t0)/(60/128):performance.now()/1000*128/60; }
-function beep(f,d,type,vol){ try{ ensureAudio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
+function beep(f,d,type,vol){ if(!isLocal()) return; try{ ensureAudio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
 
 // ---------------- player ----------------
-const player={pos:new V3(-8,0,-9),vel:new V3(),yaw:0,grounded:false,coyote:0,jumps:0,air:0,climbing:null,climbAng:0,rag:null,ragT:0,held:null,score:0,combo:0,lastTrick:0,an:0,spin:0,spinV:0,sprint:false,name:'Nutsy',color:0,mesh:null,headbuttT:0};
+// Every squirrel is simulated identically on every machine (lockstep). The gameplay code below is written against
+// a single `player`/`keys` pair; the simulation swaps those in per player each tick.
+function newPlayer(slot){ return {slot,active:slot===0,pos:new V3(slot?-7:-11,0,-17),vel:new V3(),yaw:0,grounded:false,coyote:0,jumps:0,air:0,climbing:null,climbAng:0,rag:null,ragT:0,held:null,driving:null,carSpeed:0,carYaw:0,score:0,combo:0,lastTrick:-1e9,an:0,spin:0,spinV:0,sprint:false,name:slot?'Friend':'Nutsy',color:slot?1:0,mesh:null,headbuttT:0,cd:{},pin:[],pent:[],vibe:[],zcd:[],aboard:false,tubT:0,boardCd:-1e9,flownCd:-1e9}; }
+function resetPlayerState(P){ const keep={name:P.name,color:P.color,mesh:P.mesh,active:P.active}; const f=newPlayer(P.slot); for(const k in f) P[k]=f[k]; Object.assign(P,keep); }
+const players=[newPlayer(0),newPlayer(1)];
+let localSlot=0; let player=players[0];
+const isLocal=()=>player===players[localSlot];
 const cam={yaw:Math.PI,pitch:0.35,dist:6.5,pos:new V3()};
-const keys={};
-let myHits=[], hitSeq=0, nextTrickId=0;
+const kb={}; // the live keyboard (local only)
+let keys={}; // the input record of the squirrel being simulated
+let oneShot={j:false,f:false,e:false,r:false};
+const TICK=1/60, TICK_MS=1000/60;
+let simTick=0; function simNow(){ return simTick*TICK_MS; }
+let srng=mulberry32(777); // runtime randomness: seeded, consumed in the same order on every machine
 
-function setFur(i){ player.color=i; if(player.mesh) scene.remove(player.mesh.holder); player.mesh=makeSquirrel(FURS[i].c); scene.add(player.mesh.holder); try{ localStorage.setItem('sq_fur',String(i)); }catch(e){} }
+function setFur(i){ const P=players[localSlot]; P.color=i; if(P.mesh) scene.remove(P.mesh.holder); P.mesh=makeSquirrel(FURS[i].c); scene.add(P.mesh.holder); try{ localStorage.setItem('sq_fur',String(i)); }catch(e){} }
+function setPlayerMesh(P,color){ if(P.mesh&&P.meshColor===color) return; if(P.mesh) scene.remove(P.mesh.holder); P.mesh=makeSquirrel(FURS[clamp(color|0,0,FURS.length-1)].c); P.meshColor=color; scene.add(P.mesh.holder); }
 
 function trick(name,pts){
-  const now=performance.now()/1000;
+  const now=simNow()/1000;
   if(now-player.lastTrick<2.5) player.combo++; else player.combo=1;
   player.lastTrick=now;
   const mult=Math.min(player.combo,5);
   player.score+=pts*mult;
+  if(!isLocal()) return;
   const el=document.createElement('div'); el.className='toast'; el.textContent=name+' +'+pts;
   if(mult>1){ const m=document.createElement('span'); m.className='mult'; m.textContent='×'+mult; el.appendChild(m); }
   const box=$('toasts'); box.appendChild(el); while(box.children.length>4) box.removeChild(box.firstChild);
@@ -1125,14 +1134,8 @@ function trick(name,pts){
 }
 
 function hitBody(b,imp,point){
-  b.lastHitBy='me'; b.lastHitT=performance.now();
-  if(Net.isHost){ b.applyImpulse(imp,point); if(b.npc&&b.npc.state!=='rag'&&imp.length()>2.5) ragdollNPC(b.npc,null,'me'); }
-  else {
-    myHits.push([++hitSeq,b.idx,r2(imp.x),r2(imp.y),r2(imp.z),r2(point.x),r2(point.y),r2(point.z)]);
-    if(myHits.length>8) myHits.shift();
-    b.vel.copy(imp).multiplyScalar(b.invMass); // local guess until host state arrives
-    if(b.npc&&remoteNpcMode[b.npc.body.idx]!==1&&imp.length()>2.5&&!b.npc.localRag){ b.npc.localRag=true; setTimeout(()=>b.npc.localRag=false,3000); trick(npcTrick(b.npc.role),npcPts(b.npc.role)); }
-  }
+  b.lastHitBy=player; b.lastHitT=simNow();
+  b.applyImpulse(imp,point); if(b.npc&&b.npc.state!=='rag'&&imp.length()>2.5) ragdollNPC(b.npc,null,player);
 }
 
 function headbutt(){
@@ -1145,7 +1148,7 @@ function headbutt(){
     if(b.held&&b.held!=='npc') continue;
     if(b.driver) continue;
     tv2.subVectors(b.pos,origin); const d=tv2.length()-b.radius*0.5; if(d>2.2) continue;
-    if(b.held==='npc'){ if(Net.isHost){ b.held=null; b.wake(); } trick('STOLE THE ROCK',60); }
+    if(b.held==='npc'){ b.held=null; b.wake(); trick('STOLE THE ROCK',60); }
     tv2.y=0; tv2.normalize(); if(tv2.dot(fwd)<0.2) continue;
     const vmag=9*Math.sqrt(2.5/(b.mass+1.5))*(player.sprint?1.3:1);
     const dir=new V3().copy(fwd).multiplyScalar(1).add(new V3(0,0.55,0)).normalize();
@@ -1164,34 +1167,33 @@ function tailGrab(){
     const v=new V3().copy(fwd).multiplyScalar(player.sprint?16:11); v.y=6; v.add(player.vel);
     b.held=null; player.held=null;
     const imp=v.multiplyScalar(b.mass);
-    if(Net.isHost){ b.wake(); b.vel.set(0,0,0); b.applyImpulse(imp,null); b.angVel.set((rng()-0.5)*8,(rng()-0.5)*8,(rng()-0.5)*8); b.lastHitBy='me'; }
-    else { myHits.push([++hitSeq,b.idx,r2(imp.x),r2(imp.y),r2(imp.z),r2(b.pos.x),r2(b.pos.y),r2(b.pos.z)]); if(myHits.length>8) myHits.shift(); b.lastHitBy='me'; }
+    b.wake(); b.vel.set(0,0,0); b.applyImpulse(imp,null); b.angVel.set((srng()-0.5)*8,(srng()-0.5)*8,(srng()-0.5)*8); b.lastHitBy=player;
     trick('TAIL FLING',40); return;
   }
   if(tryFly()) return;
   if(player.driving){ exitCar(); return; }
   { let car=null,cd=3.2; for(const b of bodies){ if(b.kind!=='car'||b.held||b.driver) continue; const d=Math.hypot(b.pos.x-player.pos.x,b.pos.z-player.pos.z); if(d<cd){ cd=d; car=b; } } if(car){ enterCar(car); return; } }
-  for(const e of whimsy.elevators){ if(Math.hypot(player.pos.x-e.x,player.pos.z-e.z)<2&&Math.abs(player.pos.y-(e.y||0))<2.5){ player.pos.set(e.to[0],e.to[1],e.to[2]); player.vel.set(0,0,0); cam.pos.set(0,0,0); centerMsg(e.msg,'Ding!'); beep(700,0.2,'sine',0.05); if(e.msg==='PENTHOUSE'&&performance.now()>whimsy.penthouseCd){ whimsy.penthouseCd=performance.now()+60000; trick('PENTHOUSE PARTY',100); } return; } }
+  for(const e of whimsy.elevators){ if(Math.hypot(player.pos.x-e.x,player.pos.z-e.z)<2&&Math.abs(player.pos.y-(e.y||0))<2.5){ player.pos.set(e.to[0],e.to[1],e.to[2]); player.vel.set(0,0,0); if(isLocal()) cam.pos.set(0,0,0); centerMsg(e.msg,'Ding!'); beep(700,0.2,'sine',0.05); if(e.msg==='PENTHOUSE'&&simNow()>(player.cd.pent||0)){ player.cd.pent=simNow()+60000; trick('PENTHOUSE PARTY',100); } return; } }
   const fwd=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw));
   let best=null,bd=2.6;
   for(const b of bodies){ if((b.held&&b.held!=='npc')||b.driver||b.kind==='car') continue; tv.subVectors(b.pos,player.pos); const d=tv.length()-b.radius*0.4; if(d<bd){ bd=d; best=b; } }
   if(!best) return;
-  if(best.held==='npc'){ if(Net.isHost) best.held=null; trick('STOLE THE ROCK',60); }
-  if(best.npc&&Net.isHost&&best.npc.state!=='rag') ragdollNPC(best.npc,null,'me');
-  best.held='me'; player.held=best; best.wake();
+  if(best.held==='npc'){ best.held=null; trick('STOLE THE ROCK',60); }
+  if(best.npc&&best.npc.state!=='rag') ragdollNPC(best.npc,null,player);
+  best.held=player; player.held=best; best.wake();
   trick(best.kind==='duck'?'DUCK NAPPED':'TAIL GRAB',best.kind==='duck'?80:10);
 }
 function carYaw(b){ const f=new V3(0,0,1).applyQuaternion(b.quat); return Math.atan2(f.x,f.z); }
 function enterCar(car){
   if(player.held) tailGrab(); player.driving=car; player.carSpeed=0; player.carYaw=carYaw(car); car.wake(); car.asleep=false; car.angVel.set(0,0,0); car.quat.setFromAxisAngle(UP,player.carYaw); car.pos.y=car.half.y;
-  if(Net.isHost) car.driver='me'; else car.held='me';
-  player.pos.set(car.pos.x,car.pos.y,car.pos.z); player.vel.set(0,0,0); cam.dist=Math.max(cam.dist,9);
-  if(performance.now()>whimsy.driveCd){ whimsy.driveCd=performance.now()+30000; trick('JOYRIDE',50); } centerMsg('VROOM','WASD drives · E hops out'); beep(120,0.4,'sawtooth',0.06);
+  car.driver=player;
+  player.pos.set(car.pos.x,car.pos.y,car.pos.z); player.vel.set(0,0,0); if(isLocal()) cam.dist=Math.max(cam.dist,9);
+  if(simNow()>(player.cd.drive||0)){ player.cd.drive=simNow()+30000; trick('JOYRIDE',50); } centerMsg('VROOM','WASD drives · E hops out'); beep(120,0.4,'sawtooth',0.06);
 }
 function exitCar(){
   const car=player.driving; if(!car) return; const f=new V3(Math.sin(player.carYaw),0,Math.cos(player.carYaw));
   player.pos.set(car.pos.x-f.z*2.2,car.pos.y+0.5,car.pos.z+f.x*2.2); player.vel.copy(car.vel); player.driving=null;
-  if(Net.isHost) car.driver=null; else car.held=null; car.wake();
+  car.driver=null; car.wake();
 }
 function updateDriving(dt,move){
   const car=player.driving; const iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0), ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0);
@@ -1200,28 +1202,28 @@ function updateDriving(dt,move){
   player.carYaw-=ix*2.2*dt*clamp(Math.abs(player.carSpeed)/6,0,1)*Math.sign(player.carSpeed||1);
   const f=new V3(Math.sin(player.carYaw),0,Math.cos(player.carYaw));
   car.pos.addScaledVector(f,player.carSpeed*dt); car.pos.y=car.half.y; car.vel.copy(f).multiplyScalar(player.carSpeed); car.angVel.set(0,0,0);
-  car.quat.setFromAxisAngle(UP,player.carYaw); car.lastHitBy='me'; car.lastHitT=performance.now();
+  car.quat.setFromAxisAngle(UP,player.carYaw); car.lastHitBy=player; car.lastHitT=simNow();
   car.pos.x=clamp(car.pos.x,-WORLD,WORLD); car.pos.z=clamp(car.pos.z,-WORLD,WORLD);
   const r=1.6;
   for(const s of statics){ if(s.max.y<0.3||s.min.y>2) continue; const cx=clamp(car.pos.x,s.min.x,s.max.x), cz=clamp(car.pos.z,s.min.z,s.max.z); const ex=car.pos.x-cx, ez=car.pos.z-cz, d=Math.hypot(ex,ez); if(d<r&&d>1e-4){ car.pos.x+=ex/d*(r-d); car.pos.z+=ez/d*(r-d); if(Math.abs(player.carSpeed)>4){ beep(80,0.15,'square',0.04); } player.carSpeed*=-0.3; } }
   for(const t of trees){ const dx=car.pos.x-t.x, dz=car.pos.z-t.z, d=Math.hypot(dx,dz); if(d<r+t.r&&d>1e-4){ car.pos.x+=dx/d*(r+t.r-d); car.pos.z+=dz/d*(r+t.r-d); player.carSpeed*=-0.3; } }
-  if(!Net.isHost){ for(const b of bodies){ if(b===car||b.held) continue; const dx=b.pos.x-car.pos.x, dz=b.pos.z-car.pos.z, d=Math.hypot(dx,dz), rr=r+b.radius*0.6; if(d<rr&&d>1e-4&&Math.abs(player.carSpeed)>2){ const imp=new V3(dx/d,0.3,dz/d).multiplyScalar(Math.abs(player.carSpeed)*b.mass*0.5); hitBody(b,imp,b.pos.clone()); } } }
   player.pos.set(car.pos.x,car.pos.y,car.pos.z); player.vel.copy(car.vel); player.yaw=player.carYaw; player.an=0; player.grounded=true;
   if(keys[' ']) beep(300,0.1,'square',0.05);
-  let dy=player.carYaw+Math.PI-cam.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); cam.yaw+=dy*Math.min(1,3*dt);
+  if(isLocal()){ let dy=player.carYaw+Math.PI-cam.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); cam.yaw+=dy*Math.min(1,3*dt); }
 }
 function enterRagdoll(v){
   if(player.driving) exitCar();
   if(player.held) tailGrab();
   if(player.climbing) player.climbing=null;
   const b=new Body({idx:-1,kind:'player',half:new V3(0.38,0.3,0.3),mass:1.5,mesh:null,e:0.35,mu:0.5});
-  b.pos.copy(player.pos); b.pos.y+=0.4; b.vel.copy(v); b.angVel.set((rng()-0.5)*10,(rng()-0.5)*6,(rng()-0.5)*10);
+  b.pos.copy(player.pos); b.pos.y+=0.4; b.vel.copy(v); b.angVel.set((srng()-0.5)*10,(srng()-0.5)*6,(srng()-0.5)*10);
   b.quat.setFromAxisAngle(UP,player.yaw);
   player.rag=b; player.ragT=0;
 }
 function exitRagdoll(){
   const b=player.rag; player.pos.copy(b.pos); player.pos.y=Math.max(0,player.pos.y-0.4); player.vel.copy(b.vel); player.rag=null; player.jumps=1;
 }
+function ragToggle(){ if(player.rag){ if(player.ragT>0.5) exitRagdoll(); } else enterRagdoll(new V3().copy(player.vel).add(new V3(0,3,0))); }
 function jump(){
   if(player.rag||player.driving) return;
   if(player.climbing){ const t=player.climbing; const ax=Math.cos(player.climbAng), az=Math.sin(player.climbAng); player.vel.set(ax*6,8.5,az*6); player.climbing=null; player.jumps=1; player.yaw=Math.atan2(ax,az); return; }
@@ -1229,7 +1231,6 @@ function jump(){
   else if(player.jumps<2){ player.vel.y=8.5; player.jumps=2; player.spinV=14; trick('TAIL FLIP',15); }
 }
 
-const remoteNpcMode=new Array(bodies.length).fill(0);
 const ROLE_TRICKS={dj:['DJ DOWN',150],bouncer:['BOUNCER BOUNCED',120],dancer:['RAVER FLATTENED',100],fighter:['K.O.!',200],baller:['POSTERIZED',250],candidate:['DEBATE DISRUPTED',300],moderator:['MODERATOR DOWN',120],audience:['HECKLER HECKLED',80],pilot:['PILOT DOWN',150],'flight attendant':['UNRULY PASSENGER',120],passenger:['UNRULY PASSENGER',100],'frat bro':['FRAT BRO FLATTENED',100],professor:['OFFICE HOURS CANCELLED',150],student:['DROPPED OUT',100],engineer:['DEPLOYED ON A FRIDAY',150],alien:['CLOSE ENCOUNTER',150],'alien dj':['ZORP DOWN',250],abductee:['FARMER DALE DOWN',80],'office worker':['LAID OFF',100],resident:['HOME INVASION',150],shopkeeper:['SHOP LIFTED',100],mannequin:['MANNEQUIN MANGLED',40],vampire:['VAMPIRE SLAYER',300],'gate agent':['FLIGHT DELAYED',100],traveler:['LOST TRAVELER',80],cashier:['PRICE CHECK',100],receptionist:['NO APPOINTMENT',100],priest:['EXCOMMUNICATED',200],parishioner:['MASS DISRUPTED',100],groom:['OBJECTION!',300],bride:['RUNAWAY BRIDE',300],'imperial soldier':['DISHONORED',120],'shogunate soldier':['DISHONORED',120],kendrick:['STAGE RUSHED',300],'backup dancer':['BACKUP DANCER DOWN',100],fan:['MOSH PIT',60],breakdancer:['BATTLE WON',150],'hype man':['HYPE OVER',80],onlooker:['BOWLED PEDESTRIAN',100],mother:['MOM IS DISAPPOINTED',150],father:['DAD JOKE INTERRUPTED',150],daughter:['SIBLING RIVALRY',100]};
 function npcTrick(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[0]; }
 function npcPts(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[1]; }
@@ -1239,11 +1240,12 @@ function ragdollNPC(n,imp,by){
   if(n.state==='rag') return;
   n.state='rag'; n.ragT=0; const b=n.body; b.kinematic=false; b.wake();
   if(imp) b.applyImpulse(imp,null);
-  b.vel.y+=3; b.angVel.set((rng()-0.5)*8,(rng()-0.5)*4,(rng()-0.5)*8);
-  if(by==='me') trick(npcTrick(n.role),npcPts(n.role));
+  b.vel.y+=3; b.angVel.set((srng()-0.5)*8,(srng()-0.5)*4,(srng()-0.5)*8);
+  if(by&&by.slot!=null){ const save=player; player=by; trick(npcTrick(n.role),npcPts(n.role)); player=save; }
 }
+function randomSidewalkRT(){ const v=ROADS[Math.floor(srng()*5)], side=srng()<0.5?-1:1, along=-92+srng()*184; return srng()<0.5?{x:along,z:v+side*5.3}:{x:v+side*5.3,z:along}; }
 function npcMode(n){ return n.state==='rag'?1:n.state==='flee'?2:n.state==='dance'?3:n.state==='idle'?4:n.state==='hunt'?5:n.state==='fight'?6:n.state==='debate'?7:n.state==='war'?8:n.state==='breakdance'?9:0; }
-function nearestPlayer(x,z){ let best=null,bd=1e9; const c=(px,py,pz)=>{ const d=Math.hypot(x-px,z-pz); if(d<bd){ bd=d; best={x:px,y:py,z:pz,d}; } }; c(player.pos.x,player.pos.y,player.pos.z); for(const r of Net.remotes.values()) if(r.st&&r.st.p) c(r.st.p[0],r.st.p[1],r.st.p[2]); return best; }
+function nearestPlayer(x,z){ let best=null,bd=1e9; for(const P of players){ if(!P.active) continue; const d=Math.hypot(x-P.pos.x,z-P.pos.z); if(d<bd){ bd=d; best={x:P.pos.x,y:P.pos.y,z:P.pos.z,d}; } } return best; }
 function updateNPCs(dt){
   for(const n of npcs){
     const b=n.body;
@@ -1251,7 +1253,7 @@ function updateNPCs(dt){
       n.ragT+=dt;
       if(n.ragT>5&&b.vel.lengthSq()<0.3&&b.pos.y<1.2){
         b.kinematic=true; b.asleep=false; b.vel.set(0,0,0); b.angVel.set(0,0,0); b.pos.y=b.half.y;
-        if(n.home.state==='walk'){ n.state='walk'; b.quat.setFromAxisAngle(UP,rng()*6.28); n.target=randomSidewalk(); }
+        if(n.home.state==='walk'){ n.state='walk'; b.quat.setFromAxisAngle(UP,srng()*6.28); n.target=randomSidewalkRT(); }
         else { n.state=n.home.state; b.pos.set(n.home.x,(n.home.y||0)+b.half.y,n.home.z); b.quat.setFromAxisAngle(UP,n.home.yaw); }
       }
       continue;
@@ -1266,7 +1268,7 @@ function updateNPCs(dt){
       if(dx===0&&dz===0) continue;
     } else if(n.state==='fight'){
       const f=n.foe.body; dx=f.pos.x-b.pos.x; dz=f.pos.z-b.pos.z; const fd=Math.hypot(dx,dz)||1;
-      speed=fd>1.7?1.6:fd<1.2?-1.2:0; const sway=Math.sin(performance.now()/300+n.walkPhase)*0.6;
+      speed=fd>1.7?1.6:fd<1.2?-1.2:0; const sway=Math.sin(simNow()/300+n.walkPhase)*0.6;
       b.pos.x+=(dx/fd*speed-dz/fd*sway)*dt; b.pos.z+=(dz/fd*speed+dx/fd*sway)*dt;
       b.pos.x=clamp(b.pos.x,n.home.x-3.2,n.home.x+3.2); b.pos.z=clamp(b.pos.z,n.home.z-3.2,n.home.z+3.2); b.pos.y=(n.home.y||0)+b.half.y;
       b.vel.set(0,0,0); tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt)); continue;
@@ -1275,32 +1277,32 @@ function updateNPCs(dt){
       const ball=whimsy.ball; n.cool=Math.max(0,n.cool-dt);
       if(ball.held==='npc'){
         n.dribbleT+=dt; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed;
-        if(Math.hypot(dx,dz)<1.5) n.target={x:whimsy.court.x+(rng()-0.5)*10,z:whimsy.court.z+(rng()-0.5)*18};
-        const fwdv=new V3(0,0,1).applyQuaternion(b.quat); ball.pos.set(b.pos.x+fwdv.x*0.45-fwdv.z*0.45,0.3+Math.abs(Math.sin(performance.now()/110))*0.75,b.pos.z+fwdv.z*0.45+fwdv.x*0.45); ball.vel.set(0,0,0); ball.angVel.set(6,0,0);
+        if(Math.hypot(dx,dz)<1.5) n.target={x:whimsy.court.x+(srng()-0.5)*10,z:whimsy.court.z+(srng()-0.5)*18};
+        const fwdv=new V3(0,0,1).applyQuaternion(b.quat); ball.pos.set(b.pos.x+fwdv.x*0.45-fwdv.z*0.45,0.3+Math.abs(Math.sin(simNow()/110))*0.75,b.pos.z+fwdv.z*0.45+fwdv.x*0.45); ball.vel.set(0,0,0); ball.angVel.set(6,0,0);
         let hoop=whimsy.hoops[0]; if(ball.pos.distanceTo(whimsy.hoops[1])<ball.pos.distanceTo(hoop)) hoop=whimsy.hoops[1];
         const hd=Math.hypot(hoop.x-ball.pos.x,hoop.z-ball.pos.z);
-        if(hd<7.5&&n.dribbleT>3){ ball.held=null; ball.wake(); const T=1.25; ball.vel.set((hoop.x-ball.pos.x)/T,(hoop.y+0.4-ball.pos.y+0.5*G*T*T)/T,(hoop.z-ball.pos.z)/T); ball.angVel.set((rng()-0.5)*6,0,(rng()-0.5)*6); ball.lastHitBy=null; n.dribbleT=0; n.cool=2.5; speed=0; }
+        if(hd<7.5&&n.dribbleT>3){ ball.held=null; ball.wake(); const T=1.25; ball.vel.set((hoop.x-ball.pos.x)/T,(hoop.y+0.4-ball.pos.y+0.5*G*T*T)/T,(hoop.z-ball.pos.z)/T); ball.angVel.set((srng()-0.5)*6,0,(srng()-0.5)*6); ball.lastHitBy=null; n.dribbleT=0; n.cool=2.5; speed=0; }
       } else {
         dx=ball.pos.x-b.pos.x; dz=ball.pos.z-b.pos.z; const bd=Math.hypot(dx,dz); speed=ball.held?0:n.speed;
-        if(!ball.held&&bd<1.3&&n.cool<=0&&ball.pos.y<1.5){ ball.held='npc'; ball.wake(); n.dribbleT=0; n.target={x:whimsy.court.x+(rng()-0.5)*10,z:whimsy.court.z+(rng()-0.5)*18}; speed=0; }
+        if(!ball.held&&bd<1.3&&n.cool<=0&&ball.pos.y<1.5){ ball.held='npc'; ball.wake(); n.dribbleT=0; n.target={x:whimsy.court.x+(srng()-0.5)*10,z:whimsy.court.z+(srng()-0.5)*18}; speed=0; }
         if(bd<1.0) speed=0;
       }
     } else if(n.state==='hunt'){
       const t=nearestPlayer(b.pos.x,b.pos.z);
       if(t&&t.d<24&&t.y<1.4){ dx=t.x-b.pos.x; dz=t.z-b.pos.z; speed=n.speed; if(t.d<0.6) speed=0; }
       else if(t&&t.d<4&&t.y>=1.4){ dx=t.x-b.pos.x; dz=t.z-b.pos.z; speed=0; }
-      else { dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=2.2; if(Math.hypot(dx,dz)<1.5) n.target=randomSidewalk(); }
+      else { dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=2.2; if(Math.hypot(dx,dz)<1.5) n.target=randomSidewalkRT(); }
     } else {
       const t=nearestPlayer(b.pos.x,b.pos.z);
       if(t&&t.d<3.5){ n.fleeT=2.5; n.flee={x:b.pos.x-t.x,z:b.pos.z-t.z}; }
       if(n.fleeT>0){ n.fleeT-=dt; dx=n.flee.x; dz=n.flee.z; speed=3.6; n.state='flee'; }
-      else { n.state='walk'; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed; if(Math.hypot(dx,dz)<1){ n.target=randomSidewalk(); continue; } }
+      else { n.state='walk'; dx=n.target.x-b.pos.x; dz=n.target.z-b.pos.z; speed=n.speed; if(Math.hypot(dx,dz)<1){ n.target=randomSidewalkRT(); continue; } }
     }
     const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
     b.pos.x=clamp(b.pos.x+dx*speed*dt,-128,128); b.pos.z=clamp(b.pos.z+dz*speed*dt,-128,128); b.pos.y=(n.home.y||0)+b.half.y;
     b.vel.set(dx*speed,0,dz*speed);
     if(speed>0||n.state==='war'){ tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt)); }
-    for(const s of statics){ if(b.pos.y>s.max.y+0.5||b.pos.y<s.min.y-1) continue; const cx=clamp(b.pos.x,s.min.x,s.max.x), cz=clamp(b.pos.z,s.min.z,s.max.z); const ex=b.pos.x-cx, ez=b.pos.z-cz, dd=Math.hypot(ex,ez); if(dd<0.5){ if(dd>1e-4){ b.pos.x+=ex/dd*(0.5-dd); b.pos.z+=ez/dd*(0.5-dd);} if(n.state!=='hunt') n.target=randomSidewalk(); } }
+    for(const s of statics){ if(b.pos.y>s.max.y+0.5||b.pos.y<s.min.y-1) continue; const cx=clamp(b.pos.x,s.min.x,s.max.x), cz=clamp(b.pos.z,s.min.z,s.max.z); const ex=b.pos.x-cx, ez=b.pos.z-cz, dd=Math.hypot(ex,ez); if(dd<0.5){ if(dd>1e-4){ b.pos.x+=ex/dd*(0.5-dd); b.pos.z+=ez/dd*(0.5-dd);} if(n.state!=='hunt') n.target=randomSidewalkRT(); } }
   }
 }
 
@@ -1308,7 +1310,7 @@ function updateNPCs(dt){
 function collidePlayerBodies(dt){
   const pr=0.5; const c=tv.copy(player.pos); c.y+=0.45;
   for(const b of bodies){
-    if(b.held==='me'||b.driver) continue;
+    if(b.held===player||b.driver===player) continue;
     tv2.subVectors(c,b.pos); if(tv2.length()>b.radius+pr) continue;
     tq.copy(b.quat).invert(); tv2.applyQuaternion(tq);
     const lx=clamp(tv2.x,-b.half.x,b.half.x), ly=clamp(tv2.y,-b.half.y,b.half.y), lz=clamp(tv2.z,-b.half.z,b.half.z);
@@ -1324,9 +1326,9 @@ function collidePlayerBodies(dt){
       player.vel.addScaledVector(n,-vn);
       const pm=player.sprint?3:1.5;
       const point=new V3().copy(c).addScaledVector(n,-pr);
-      if(-vn>1.5){ const imp=n.clone().multiplyScalar(vn*pm*(b.kind==='door'?2.5:1)); hitBody(b,imp,point); b.lastHitBy='me';
+      if(-vn>1.5){ const imp=n.clone().multiplyScalar(vn*pm*(b.kind==='door'?2.5:1)); hitBody(b,imp,point);
         if(b.kind==='door'&&!b.broken){ b.broken=true; trick('BREAKING AND ENTERING',75); } else if(b.kind==='car'&&-vn>5) trick('CAR BUMP',30); else if(!b.npc&&-vn>5) trick('BODY SLAM',20); }
-      else if(Net.isHost&&!b.kinematic&&b.kind!=='door'&&!b.driver){ b.applyImpulse(n.clone().multiplyScalar(vn*pm*0.5),point); }
+      else if(!b.kinematic&&b.kind!=='door'&&!b.driver){ b.applyImpulse(n.clone().multiplyScalar(vn*pm*0.5),point); }
     }
     if(n.y>0.6){ player.grounded=true; player.pos.addScaledVector(bodyV,dt*0.9); }
     // hit by a speeding prop
@@ -1355,24 +1357,24 @@ function collidePlayerTrees(move,dt){
     if(d<rr&&player.pos.y<t.h-0.2){
       const nx=dx/d, nz=dz/d;
       const toward=-(move.x*nx+move.z*nz);
-      if(toward>0.5&&move.lengthSq()>0.1){ player.climbing=t; player.climbAng=Math.atan2(dz,dx); player.vel.set(0,0,0); player.jumps=0; player.pos.y=Math.max(player.pos.y,0.2); if(!t.scored){ t.scored=true; setTimeout(()=>t.scored=false,8000); trick(t.rope?'ROPE CLIMB':'TREE CLIMB',t.rope?30:10);} }
+      if(toward>0.5&&move.lengthSq()>0.1){ player.climbing=t; player.climbAng=Math.atan2(dz,dx); player.vel.set(0,0,0); player.jumps=0; player.pos.y=Math.max(player.pos.y,0.2); if(simNow()-(t.scoredAt||-1e9)>8000){ t.scoredAt=simNow(); trick(t.rope?'ROPE CLIMB':'TREE CLIMB',t.rope?30:10);} }
       else { player.pos.x+=nx*(rr-d); player.pos.z+=nz*(rr-d); const vn=player.vel.x*nx+player.vel.z*nz; if(vn<0){ player.vel.x-=nx*vn; player.vel.z-=nz*vn; } }
     }
   }
 }
 function collidePlayerRemotes(){
-  const R=1.0, now=performance.now();
-  for(const r of Net.remotes.values()){
-    if(!r.st||!Array.isArray(r.st.p)) continue;
-    if(Math.abs(player.pos.y-r.pos.y)>0.9) continue;
-    const dx=player.pos.x-r.pos.x, dz=player.pos.z-r.pos.z, d=Math.hypot(dx,dz);
+  const R=1.0, now=simNow();
+  for(const O of players){
+    if(O===player||!O.active||O.driving) continue;
+    if(Math.abs(player.pos.y-O.pos.y)>0.9) continue;
+    const dx=player.pos.x-O.pos.x, dz=player.pos.z-O.pos.z, d=Math.hypot(dx,dz);
     if(d>=1.6||d<1e-4) continue;
-    const nx=dx/d, nz=dz/d, rv=r.vel;
-    const vn=(player.vel.x-rv.x)*nx+(player.vel.z-rv.z)*nz; // closing speed (negative = approaching)
-    if(vn<-6&&now-(r.lastSlam||0)>1500){
+    const nx=dx/d, nz=dz/d, rv=O.vel;
+    const vn=(player.vel.x-rv.x)*nx+(player.vel.z-rv.z)*nz;
+    if(vn<-6&&now-(player.cd.slam||-1e9)>1500){
       const mySp=Math.hypot(player.vel.x,player.vel.z), theirSp=Math.hypot(rv.x,rv.z);
-      if(theirSp>mySp+1.5){ r.lastSlam=now; enterRagdoll(new V3(rv.x*1.2,6,rv.z*1.2)); centerMsg('SLAMMED','by '+String(r.st.nm||'a squirrel').slice(0,14)); return; }
-      if(mySp>theirSp+1.5){ r.lastSlam=now; trick('SQUIRREL SLAM',30); }
+      if(theirSp>mySp+1.5){ player.cd.slam=now; enterRagdoll(new V3(rv.x*1.2,6,rv.z*1.2)); centerMsg('SLAMMED','by '+String(O.name||'a squirrel').slice(0,14)); return; }
+      if(mySp>theirSp+1.5){ player.cd.slam=now; trick('SQUIRREL SLAM',30); }
     }
     if(d<R){
       player.pos.x+=nx*(R-d)*0.6; player.pos.z+=nz*(R-d)*0.6;
@@ -1380,12 +1382,10 @@ function collidePlayerRemotes(){
     }
   }
 }
-function centerMsg(txt,sub){ const el=$('centerMsg'); el.hidden=false; el.textContent=txt; if(sub){ const s=document.createElement('small'); s.textContent=sub; el.appendChild(s);} clearTimeout(centerMsg.t); centerMsg.t=setTimeout(()=>el.hidden=true,1600); }
+function centerMsg(txt,sub){ if(!isLocal()) return; const el=$('centerMsg'); el.hidden=false; el.textContent=txt; if(sub){ const s=document.createElement('small'); s.textContent=sub; el.appendChild(s);} clearTimeout(centerMsg.t); centerMsg.t=setTimeout(()=>el.hidden=true,1600); }
 
 function updatePlayer(dt,t){
-  const fwd=new V3(-Math.sin(cam.yaw),0,-Math.cos(cam.yaw)); const right=new V3(-fwd.z,0,fwd.x);
-  const ix=(keys['d']||keys['arrowright']?1:0)-(keys['a']||keys['arrowleft']?1:0), iz=(keys['w']||keys['arrowup']?1:0)-(keys['s']||keys['arrowdown']?1:0);
-  const move=new V3(fwd.x*iz+right.x*ix,0,fwd.z*iz+right.z*ix); if(move.lengthSq()>1) move.normalize();
+  const move=new V3(keys.mx||0,0,keys.mz||0); if(move.lengthSq()>1) move.normalize();
   player.sprint=!!keys['shift'];
   player.headbuttT=Math.max(0,player.headbuttT-dt);
   if(player.driving){ updateDriving(dt,move); return; }
@@ -1418,7 +1418,7 @@ function updatePlayer(dt,t){
   player.vel.x=approach(player.vel.x,move.x*speed,accel*dt); player.vel.z=approach(player.vel.z,move.z*speed,accel*dt);
   const onMoon=Math.hypot(player.pos.x-whimsy.moon.x,player.pos.z-whimsy.moon.z)<whimsy.moon.r&&player.pos.y<12;
   player.vel.y-=G*(onMoon?0.28:1)*dt;
-  if(onMoon&&performance.now()>whimsy.moonCd){ whimsy.moonCd=performance.now()+40000; trick('MOONWALK',25); }
+  if(onMoon&&simNow()>(player.cd.moon||0)){ player.cd.moon=simNow()+40000; trick('MOONWALK',25); }
   player.pos.addScaledVector(player.vel,dt);
   const wasGrounded=player.grounded; player.grounded=false;
   if(player.pos.y<=0){ player.pos.y=0; if(player.vel.y<0) player.vel.y=0; player.grounded=true; }
@@ -1432,22 +1432,27 @@ function updatePlayer(dt,t){
   if(hs>0.6) player.yaw=Math.atan2(player.vel.x,player.vel.z);
   player.an=player.grounded?(hs>0.5?1:0):2;
   // rooftops, club, hot tub
-  if(player.grounded&&player.pos.y>9&&performance.now()>whimsy.roofCd){ whimsy.roofCd=performance.now()+40000; trick('ROOFTOP',150); }
-  for(const P of PARTIES){ const ins=Math.abs(player.pos.x-P.x)<P.hx&&Math.abs(player.pos.z-P.z)<P.hz&&player.pos.y>P.y0&&player.pos.y<P.y1;
-    if(ins&&!P.inside&&performance.now()-P.enteredAt>30000){ P.enteredAt=performance.now(); trick(P.name,P.pts); centerMsg(P.name,'untz untz untz'); }
-    P.inside=ins; if(ins&&hs>2){ P.vibeT+=dt; if(P.vibeT>3){ P.vibeT=0; trick('VIBING',5); } } }
-  for(const Z of ZONES){ const ins=Math.abs(player.pos.x-Z.x)<Z.hx&&Math.abs(player.pos.z-Z.z)<Z.hz&&player.pos.y>Z.y0&&player.pos.y<Z.y1; if(ins&&performance.now()>Z.cd){ Z.cd=performance.now()+45000; trick(Z.name,Z.pts); } }
-  if(whimsy.exitPad&&player.pos.y>ALIEN.y-1&&Math.hypot(player.pos.x-ALIEN.x,player.pos.z-(ALIEN.z+9.5))<1.5){ player.pos.set(-20,8,-30); player.vel.set(0,-2,0); cam.pos.set(0,0,0); trick('RETURNED TO EARTH',100); centerMsg('BEAMED DOWN','thanks for partying with Zorp'); beep(900,0.4,'sine',0.05); }
-  if(whimsy.tub&&Math.abs(player.pos.y-(whimsy.tub.y+0.9))<0.4&&Math.hypot(player.pos.x-whimsy.tub.x,player.pos.z-whimsy.tub.z)<1.9){ whimsy.tubT+=dt; if(whimsy.tubT>3){ whimsy.tubT=0; trick('HOT TUB',5); } }
+  if(player.grounded&&player.pos.y>9&&simNow()>(player.cd.roof||0)){ player.cd.roof=simNow()+40000; trick('ROOFTOP',150); }
+  PARTIES.forEach((P,Pi)=>{ const ins=Math.abs(player.pos.x-P.x)<P.hx&&Math.abs(player.pos.z-P.z)<P.hz&&player.pos.y>P.y0&&player.pos.y<P.y1;
+    if(ins&&!player.pin[Pi]&&simNow()-(player.pent[Pi]||-1e9)>30000){ player.pent[Pi]=simNow(); trick(P.name,P.pts); centerMsg(P.name,'untz untz untz'); }
+    player.pin[Pi]=ins; if(ins&&hs>2){ player.vibe[Pi]=(player.vibe[Pi]||0)+dt; if(player.vibe[Pi]>3){ player.vibe[Pi]=0; trick('VIBING',5); } } });
+  ZONES.forEach((Z,Zi)=>{ const ins=Math.abs(player.pos.x-Z.x)<Z.hx&&Math.abs(player.pos.z-Z.z)<Z.hz&&player.pos.y>Z.y0&&player.pos.y<Z.y1; if(ins&&simNow()>(player.zcd[Zi]||0)){ player.zcd[Zi]=simNow()+45000; trick(Z.name,Z.pts); } });
+  if(whimsy.exitPad&&player.pos.y>ALIEN.y-1&&Math.hypot(player.pos.x-ALIEN.x,player.pos.z-(ALIEN.z+9.5))<1.5){ player.pos.set(-20,8,-30); player.vel.set(0,-2,0); if(isLocal()) cam.pos.set(0,0,0); trick('RETURNED TO EARTH',100); centerMsg('BEAMED DOWN','thanks for partying with Zorp'); beep(900,0.4,'sine',0.05); }
+  if(whimsy.tub&&Math.abs(player.pos.y-(whimsy.tub.y+0.9))<0.4&&Math.hypot(player.pos.x-whimsy.tub.x,player.pos.z-whimsy.tub.z)<1.9){ player.tubT+=dt; if(player.tubT>3){ player.tubT=0; trick('HOT TUB',5); } }
   // acorns
-  for(const a of acorns){ if(a.taken){ if(t>a.taken+30){ a.taken=0; a.mesh.visible=true; } continue; } const dx=player.pos.x-a.x, dz=player.pos.z-a.z; if(dx*dx+dz*dz<0.9*0.9&&player.pos.y<1.2){ a.taken=Math.max(t,0.01); a.mesh.visible=false; player.score+=10; beep(900,0.08,'sine',0.04); flash('+10 acorn'); } }
+  { const st=simNow()/1000; for(const a of acorns){ if(a.taken){ if(st>a.taken+30){ a.taken=0; a.mesh.visible=true; } continue; } const dx=player.pos.x-a.x, dz=player.pos.z-a.z; if(dx*dx+dz*dz<0.9*0.9&&player.pos.y<1.2){ a.taken=Math.max(st,0.01); a.mesh.visible=false; player.score+=10; beep(900,0.08,'sine',0.04); flash('+10 acorn'); } } }
   // spook
-  for(const n of npcs){ if(n.spookCd>0){ n.spookCd-=dt; continue; } const mode=Net.isHost?npcMode(n):remoteNpcMode[n.body.idx]; if((mode===0||mode===2)&&Math.hypot(n.body.pos.x-player.pos.x,n.body.pos.z-player.pos.z)<2.0){ n.spookCd=7; trick('SPOOKED',15); } }
+  for(const n of npcs){ if(n.spookCd>0){ n.spookCd-=dt; continue; } const mode=npcMode(n); if((mode===0||mode===2)&&Math.hypot(n.body.pos.x-player.pos.x,n.body.pos.z-player.pos.z)<2.0){ n.spookCd=7; trick('SPOOKED',15); } }
   // held prop follows tail
   if(player.held){ const b=player.held; const f=new V3(Math.sin(player.yaw),0,Math.cos(player.yaw)); const anchor=new V3().copy(player.pos).addScaledVector(f,-1.3); anchor.y+=1.1+b.half.y*0.5;
     tv.copy(anchor).sub(b.pos); b.vel.copy(tv).divideScalar(Math.max(dt,0.001)).multiplyScalar(0.5); b.pos.lerp(anchor,Math.min(1,14*dt)); tq.setFromAxisAngle(UP,player.yaw); b.quat.slerp(tq,Math.min(1,6*dt)); b.angVel.set(0,0,0); }
 }
-let flashT=0; function flash(txt){ const el=document.createElement('div'); el.className='toast'; el.style.fontSize='16px'; el.style.color='var(--leaf)'; el.textContent=txt; const box=$('toasts'); box.appendChild(el); setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },1500); }
+function updatePlayerStep(dt,inp){ // one squirrel, one tick: one-shot commands first, then movement
+  keys={w:inp.w,a:inp.a,s:inp.s,d:inp.d,shift:inp.shift,' ':inp.space,mx:inp.mx,mz:inp.mz};
+  if(inp.j) jump(); if(inp.f) headbutt(); if(inp.e) tailGrab(); if(inp.r) ragToggle();
+  updatePlayer(dt,simNow()/1000); updateWhimsyPlayer(dt);
+}
+let flashT=0; function flash(txt){ if(!isLocal()) return; const el=document.createElement('div'); el.className='toast'; el.style.fontSize='16px'; el.style.color='var(--leaf)'; el.textContent=txt; const box=$('toasts'); box.appendChild(el); setTimeout(()=>{ if(el.parentNode) el.parentNode.removeChild(el); },1500); }
 
 // ---------------- camera ----------------
 function camOcclude(from,to){
@@ -1461,18 +1466,18 @@ function camOcclude(from,to){
   return best;
 }
 function updateCamera(dt){
-  const target=tv.copy(player.pos); target.y+=0.9;
+  const target=tv.copy(players[localSlot].pos); target.y+=0.9;
   const cp=Math.cos(cam.pitch);
   tv2.set(Math.sin(cam.yaw)*cp,Math.sin(cam.pitch),Math.cos(cam.yaw)*cp).multiplyScalar(cam.dist).add(target);
   const occ=camOcclude(target,tv2); if(occ<1){ tv2.sub(target).multiplyScalar(Math.max(0.18,occ)).add(target); }
   if(tv2.y<0.35) tv2.y=0.35;
   if(cam.pos.lengthSq()===0) cam.pos.copy(tv2); else cam.pos.lerp(tv2,Math.min(1,12*dt));
   camera.position.copy(cam.pos); camera.lookAt(target);
-  const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); sun.position.set(player.pos.x+40*(1-el)+15,12+el*70,player.pos.z+22); sun.target.position.set(player.pos.x,0,player.pos.z); sun.target.updateMatrixWorld();
+  const LP=players[localSlot]; const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); sun.position.set(LP.pos.x+40*(1-el)+15,12+el*70,LP.pos.z+22); sun.target.position.set(LP.pos.x,0,LP.pos.z); sun.target.updateMatrixWorld();
 }
 
 // ---------------- networking ----------------
-const Net={kind:'none',mode:'solo',isHost:true,code:'',myId:'me',remotes:new Map(),room:null,named:null,peer:null,conns:[],lobbyGames:[],lastHostSeen:0,connected:false,unsubs:[]};
+const Net={kind:'none',mode:'solo',isHost:true,code:'',myId:'me',room:null,named:null,peer:null,conns:[],lobbyGames:[],connected:false,unsubs:[]};
 function setStatus(txt,err){ const el=$('status'); el.textContent=txt||''; el.classList.toggle('err',!!err); }
 function genCode(){ const A='ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; let s=''; for(let i=0;i<4;i++) s+=A[Math.floor(Math.random()*A.length)]; return s; }
 async function detectNet(){
@@ -1488,7 +1493,7 @@ async function detectNet(){
 function setupLobby(){
   const room=Net.room;
   room.onPeers(ch=>{ Net.lobbyGames=ch.peers.filter(p=>!p.sameTab&&p.presence&&typeof p.presence.hosting==='string').map(p=>({code:String(p.presence.hosting).slice(0,4),name:String(p.presence.nick||'Someone').slice(0,14)})); renderGames(); },()=>{});
-  room.presence({nick:player.name,hosting:null}).catch(()=>{});
+  room.presence({nick:players[localSlot].name,hosting:null}).catch(()=>{});
 }
 function renderGames(){
   const el=$('games'); el.innerHTML='';
@@ -1504,26 +1509,121 @@ function refreshMenu(){
   $('hostBtn').disabled=!online; $('joinBtn').disabled=!online; $('codeIn').disabled=!online;
   const note=$('netNote');
   if(Net.kind==='room') note.innerHTML='<b>This page:</b> your friend opens this same link while signed in to Claude (share it from the share menu). Open games appear below.';
-  else if(Net.kind==='peer') note.innerHTML='<b>This file:</b> send the same HTML file to your friend. The connection is peer-to-peer; the code goes through a public matchmaking server.';
+  else if(Net.kind==='peer') note.innerHTML='<b>Online play</b> is peer-to-peer lockstep: both games run the same simulation and only your button presses travel, so it stays in sync without lag. When your friend joins, the world resets so you both start together.';
   else if(window.claude) note.innerHTML='<b>Online play is unavailable for you here</b> (not signed in, or opened from a public link). Solo play still works.';
   else note.innerHTML='<b>Online play unavailable:</b> the networking library did not load. Solo play still works.';
   renderGames();
 }
-function ensureRemote(id){ let r=Net.remotes.get(id); if(!r){ r={id,st:null,t:0,lastSeq:0,mesh:null,color:-1,pos:new V3(),yaw:0,heldIdx:-1,spin:0,vel:new V3(),lastP:null,lastT:0,lastSlam:0}; Net.remotes.set(id,r); } return r; }
-function removeRemote(id){ const r=Net.remotes.get(id); if(!r) return; if(r.mesh) scene.remove(r.mesh.holder); for(const b of bodies){ if(b.held===id) b.held=null; if(b.driver===id) b.driver=null; } Net.remotes.delete(id); }
+// ---- lockstep: both machines run the same simulation; only inputs travel ----
+const Lock={started:false,delay:0,localInputs:new Map(),remoteInputs:new Map(),remoteAck:-1,remoteMaxTick:-1,hello:0,lastRecv:0,stalls:0,stallRate:0,stallWin:0,stepWin:0,fixRot:0,hashes:new Map(),desync:false,lastSend:0,lastFix:0};
+function encInp(i){ let f=0; if(i.w)f|=1; if(i.a)f|=2; if(i.s)f|=4; if(i.d)f|=8; if(i.shift)f|=16; if(i.space)f|=32; if(i.j)f|=64; if(i.f)f|=128; if(i.e)f|=256; if(i.r)f|=512; return [f,Math.round(i.mx*100),Math.round(i.mz*100)]; }
+function decInp(a){ const f=a[0]|0; return {w:!!(f&1),a:!!(f&2),s:!!(f&4),d:!!(f&8),shift:!!(f&16),space:!!(f&32),j:!!(f&64),f:!!(f&128),e:!!(f&256),r:!!(f&512),mx:clamp((a[1]|0)/100,-1,1),mz:clamp((a[2]|0)/100,-1,1)}; }
+const EMPTY_INP=decInp([0,0,0]);
+function captureInput(){
+  if(menuOpen){ oneShot={j:false,f:false,e:false,r:false}; return EMPTY_INP; }
+  const fwd=new V3(-Math.sin(cam.yaw),0,-Math.cos(cam.yaw)); const right=new V3(-fwd.z,0,fwd.x);
+  const w=!!(kb['w']||kb['arrowup']), a=!!(kb['a']||kb['arrowleft']), sK=!!(kb['s']||kb['arrowdown']), d=!!(kb['d']||kb['arrowright']);
+  const ix=(d?1:0)-(a?1:0), iz=(w?1:0)-(sK?1:0);
+  let mx=fwd.x*iz+right.x*ix, mz=fwd.z*iz+right.z*ix; const l=Math.hypot(mx,mz); if(l>1){ mx/=l; mz/=l; }
+  const inp={w,a,s:sK,d,shift:!!kb['shift'],space:!!kb[' '],mx:Math.round(mx*100)/100,mz:Math.round(mz*100)/100,j:oneShot.j,f:oneShot.f,e:oneShot.e,r:oneShot.r};
+  oneShot={j:false,f:false,e:false,r:false}; return inp;
+}
+// the world as it was built, so both machines can restart from the same tick 0
+const INIT={bodies:bodies.map(b=>({pos:b.pos.clone(),quat:b.quat.clone(),asleep:b.asleep,kin:b.kinematic})),npcs:npcs.map(n=>({state:n.state,target:n.target?Object.assign({},n.target):null,speed:n.speed,walkPhase:n.walkPhase})),cannons:WAR.cannons.map(c=>c.t),pigeons:whimsy.pigeons.map(p=>({hx:p.hx,hz:p.hz}))};
+function resetWorld(){
+  bodies.forEach((b,i)=>{ const o=INIT.bodies[i]; b.pos.copy(o.pos); b.quat.copy(o.quat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.asleep=o.asleep; b.sleep=0; b.held=null; b.driver=null; b.kinematic=o.kin; b.lastHitBy=null; b.lastHitT=0; b.broken=false; b.mesh.visible=true; });
+  npcs.forEach((n,i)=>{ const o=INIT.npcs[i]; n.state=o.state; n.target=o.target?Object.assign({},o.target):null; n.speed=o.speed; n.fleeT=0; n.ragT=0; n.spookCd=0; n.cool=0; n.dribbleT=0; n.hasBall=false; n.walkPhase=o.walkPhase; });
+  WAR.cannons.forEach((c,i)=>{ c.t=INIT.cannons[i]; c.flash.material.opacity=0; }); WAR.shotT=0;
+  whimsy.pigeons.forEach((p,i)=>{ p.fly=0; p.vx=0; p.vz=0; p.g.position.set(INIT.pigeons[i].hx,0.14,INIT.pigeons[i].hz); });
+  whimsy.ghost.ang=0; if(whimsy.golden){ whimsy.goldenTaken=false; whimsy.golden.visible=true; }
+  for(const a of acorns){ a.taken=0; a.mesh.visible=true; }
+  for(const t of trees) t.scoredAt=-1e9;
+  PLANE.flightTick=0;
+  for(const P of players) resetPlayerState(P);
+  srng=mulberry32(777); simTick=0; Lock.trace=[];
+  Lock.localInputs.clear(); Lock.remoteInputs.clear(); Lock.hashes.clear(); Lock.remoteAck=-1; Lock.remoteMaxTick=-1; Lock.stalls=0; Lock.desync=false; Lock.fixRot=0;
+  player=players[localSlot]; if(isLocal()) cam.pos.set(0,0,0);
+}
+function worldHash(){ let h=0; for(const b of bodies){ h=(h+Math.round(b.pos.x*10)*31+Math.round(b.pos.y*10)*17+Math.round(b.pos.z*10)*7)|0; } for(const P of players){ if(P.active) h=(h+Math.round(P.pos.x*10)*13+Math.round(P.pos.z*10)*5)|0; } return h; }
+function simStep(){
+  const t=simNow()/1000;
+  for(const P of players){ if(!P.active) continue; player=P; const inp=(P.slot===localSlot?Lock.localInputs.get(simTick):Lock.remoteInputs.get(simTick))||EMPTY_INP; updatePlayerStep(TICK,inp); }
+  player=players[localSlot]; keys={};
+  for(const b of bodies) stepBody(b,TICK);
+  collideBodies(TICK); updateNPCs(TICK); updatePlane(TICK); updateWhimsy(TICK,t); updateWar(TICK,t);
+  if(Lock.trace&&Lock.trace.length<900){ let hb=0,hn=0,hp=0; for(const b of bodies){ const v=(Math.round(b.pos.x*100)*31+Math.round(b.pos.y*100)*17+Math.round(b.pos.z*100)*7)|0; if(b.npc) hn=(hn+v)|0; else hb=(hb+v)|0; } for(const P of players){ if(P.active) hp=(hp+Math.round(P.pos.x*100)*13+Math.round(P.pos.y*100)*3+Math.round(P.pos.z*100)*5)|0; } Lock.trace.push([simTick,hp,hb,hn,Math.round(srng.peek?0:0)]); }
+  if(simTick%60===0){ Lock.hashes.set(simTick,worldHash()); if(Lock.hashes.size>12){ const k=Lock.hashes.keys().next().value; Lock.hashes.delete(k); } }
+  simTick++;
+  if(simTick%120===0){ for(const m of [Lock.localInputs,Lock.remoteInputs]) for(const k of m.keys()) if(k<simTick-300) m.delete(k); }
+}
+function remoteSlot(){ return 1-localSlot; }
+function startLockstep(asHost){
+  if(!asHost){ players[1].name=players[0].name; players[1].color=players[0].color; }
+  localSlot=asHost?0:1; player=players[localSlot];
+  players[0].active=true; players[1].active=true;
+  if(!players[localSlot].mesh&&players[remoteSlot()].mesh){ const m=players[remoteSlot()].mesh; players[remoteSlot()].mesh=null; players[localSlot].mesh=m; }
+  setPlayerMesh(players[localSlot],players[localSlot].color);
+  resetWorld();
+  Lock.started=true; Lock.delay=6; Lock.lastRecv=performance.now(); Lock.hello=asHost?1:0; Lock.helloAt=performance.now();
+  centerMsg('FRIEND JOINED','world reset so you both start in sync'); beep(660,0.3,'sine',0.05);
+  updateHUD();
+}
+function stopLockstep(reason){
+  if(!Lock.started) return;
+  const R=players[remoteSlot()]; R.active=false; if(R.mesh) R.mesh.holder.visible=false;
+  for(const b of bodies){ if(b.held===R) b.held=null; if(b.driver===R) b.driver=null; }
+  if(R.held) R.held=null; R.driving=null;
+  Lock.started=false; Lock.delay=0; Lock.hello=0;
+  setNetTxt(false,reason||'Other player left');
+}
+function onNetData(d){
+  if(!d||d.v!==2) return;
+  Lock.lastRecv=performance.now();
+  if(d.h&&!Lock.started&&!Net.isHost){ startLockstep(false); }
+  if(!Lock.started) return;
+  const R=players[remoteSlot()]; if(typeof d.nm==='string') R.name=d.nm.slice(0,14); if(typeof d.c==='number'){ R.color=d.c; setPlayerMesh(R,d.c); R.mesh.holder.visible=true; }
+  if(Array.isArray(d.i)&&typeof d.t==='number'){ for(let k=0;k<d.i.length;k++){ const tk=d.t+k; if(!Lock.remoteInputs.has(tk)&&Array.isArray(d.i[k])) Lock.remoteInputs.set(tk,decInp(d.i[k])); if(tk>Lock.remoteMaxTick) Lock.remoteMaxTick=tk; } }
+  if(typeof d.a==='number') Lock.remoteAck=d.a;
+  if(Array.isArray(d.hs)&&d.hs.length===2){ const mine=Lock.hashes.get(d.hs[0]); if(mine!=null){ Lock.desync=(mine!==d.hs[1]); } }
+  if(!Net.isHost&&Array.isArray(d.fx)&&typeof d.fxt==='number'&&Math.abs(d.fxt-simTick)<40){ applyFix(d.fx,d.fxt); if(Array.isArray(d.fp)) applyPlayerFix(d.fp,d.fxt); }
+}
+function applyFix(list,fxt){ // the host's view of a few bodies, extrapolated to our tick; snap only what has really drifted
+  if(!Lock.desync) return; // only repair after a confirmed hash mismatch, and only bodies that are at rest on the host
+  for(const a of list){ const b=bodies[a[0]|0]; if(!b||a.length<15||b.kinematic||b.held||b.driver) continue;
+    if(Math.abs(a[8])+Math.abs(a[9])+Math.abs(a[10])>0.3) continue;
+    const px=a[1], py=a[2], pz=a[3]; const dx=b.pos.x-px, dy=b.pos.y-py, dz=b.pos.z-pz;
+    if(dx*dx+dy*dy+dz*dz<0.09&&b.asleep===!!a[14]) continue;
+    b.pos.set(px,py,pz); b.quat.set(a[4],a[5],a[6],a[7]).normalize(); b.vel.set(a[8],a[9],a[10]); b.angVel.set(a[11],a[12],a[13]); b.asleep=!!a[14]; b.sleep=0; Lock.fixes=(Lock.fixes||0)+1; }
+}
+function applyPlayerFix(list,fxt){ if(!Lock.desync) return; const lead=(simTick-fxt)*TICK; for(const a of list){ const P=players[a[0]|0]; if(!P||!P.active||P.rag||P.driving||P.climbing||Math.abs(a[4])+Math.abs(a[6])>1) continue; const px=a[1]+a[4]*lead, pz=a[3]+a[6]*lead; const dx=P.pos.x-px, dz=P.pos.z-pz; if(dx*dx+dz*dz<1.5) continue; P.pos.set(px,P.pos.y,pz); P.vel.set(a[4],a[5],a[6]); Lock.fixes=(Lock.fixes||0)+1; } }
+function packFix(){ const n=bodies.length, out=[]; for(let i=0;i<6;i++){ const b=bodies[(Lock.fixRot+i)%n]; out.push([b.idx,r2(b.pos.x),r2(b.pos.y),r2(b.pos.z),r3(b.quat.x),r3(b.quat.y),r3(b.quat.z),r3(b.quat.w),r2(b.vel.x),r2(b.vel.y),r2(b.vel.z),r2(b.angVel.x),r2(b.angVel.y),r2(b.angVel.z),b.asleep?1:0]); } Lock.fixRot=(Lock.fixRot+6)%n; return out; }
+function packInputs(){
+  const P=players[localSlot]; let to=simTick+Lock.delay; while(to>0&&!Lock.localInputs.has(to)) to--; const from=Math.max(0,to-11); const i=[]; for(let k=from;k<=to;k++) i.push(encInp(Lock.localInputs.get(k)||EMPTY_INP));
+  const d={v:2,s:localSlot,t:from,i,a:simTick-1,c:P.color,nm:P.name,h:Lock.hello};
+  if(simTick%60===1){ const k=simTick-1; if(Lock.hashes.has(k)) d.hs=[k,Lock.hashes.get(k)]; }
+  if(Net.isHost&&Lock.started){ d.fx=packFix(); d.fxt=simTick; if(simTick%20===0) d.fp=players.filter(P=>P.active).map(P=>[P.slot,r2(P.pos.x),r2(P.pos.y),r2(P.pos.z),r2(P.vel.x),r2(P.vel.y),r2(P.vel.z)]); }
+  return d;
+}
+function netSend(d){ if(Net.kind==='room'&&Net.named){ Net.named.presence(d).catch(()=>{}); } else if(Net.kind==='peer'){ for(const c of Net.conns){ if(c.open){ try{ c.send(d); }catch(e){} } } } }
+function netFrame(now){
+  if(Net.mode!=='online') return;
+  if(Lock.hello&&now-Lock.helloAt>4000&&Lock.remoteMaxTick>=0) Lock.hello=0;
+  if(Lock.started&&now-Lock.lastRecv>6000) stopLockstep('Connection lost');
+  if(now-Lock.lastSend>=16){ Lock.lastSend=now; netSend(packInputs()); }
+}
 function wireNamed(named){
   Net.named=named;
   Net.unsubs.push(named.onPeers(ch=>{
-    for(const p of ch.peers){ if(p.sameTab){ Net.myId=p.peer; continue; } const st=p.presence; if(st&&st.v===1){ const r=ensureRemote(p.peer); r.st=st; r.t=performance.now(); } }
-    for(const p of ch.left) removeRemote(p.peer);
+    for(const p of ch.peers){ if(p.sameTab){ Net.myId=p.peer; continue; } const st=p.presence; if(st&&st.v===2){ if(!Lock.started&&Net.isHost) startLockstep(true); onNetData(st); } }
+    for(const p of ch.left){ if(!p.sameTab) stopLockstep('Other player left'); }
   },e=>{ setStatus('Room error: '+e.code,true); setNetTxt(false,'Room error: '+e.code); }));
   Net.unsubs.push(named.onConnection(c=>{ Net.connected=c; setNetTxt(c,c?'Connected':'Reconnecting…'); },()=>{}));
 }
 function setNetTxt(on,txt){ const el=$('netTxt'); el.classList.toggle('on',!!on); el.innerHTML='<i></i>'; el.appendChild(document.createTextNode(txt)); }
 async function hostGame(){
-  const code=genCode(); Net.code=code; Net.isHost=true; Net.joinedAsGuest=false; Net.mode='online'; Net.lastHostSeen=performance.now();
+  const code=genCode(); Net.code=code; Net.isHost=true; Net.mode='online'; localSlot=0; player=players[0];
   if(Net.kind==='room'){
-    try{ const named=await Net.room.join('sq-'+code.toLowerCase()); wireNamed(named); Net.room.presence({hosting:code,nick:player.name}).catch(()=>{}); }
+    try{ const named=await Net.room.join('sq-'+code.toLowerCase()); wireNamed(named); Net.room.presence({hosting:code,nick:players[localSlot].name}).catch(()=>{}); }
     catch(e){ setStatus('Could not open a room ('+(e&&e.code||'error')+').',true); Net.mode='solo'; return false; }
   } else if(Net.kind==='peer'){
     await new Promise((res)=>{
@@ -1536,7 +1636,7 @@ async function hostGame(){
   return true;
 }
 async function joinGameNet(code){
-  Net.code=code; Net.isHost=false; Net.joinedAsGuest=true; Net.mode='online'; Net.lastHostSeen=performance.now();
+  Net.code=code; Net.isHost=false; Net.mode='online';
   if(Net.kind==='room'){
     try{ const named=await Net.room.join('sq-'+code.toLowerCase()); wireNamed(named); }
     catch(e){ setStatus('Could not join ('+(e&&e.code||'error')+').',true); Net.mode='solo'; return false; }
@@ -1551,92 +1651,29 @@ async function joinGameNet(code){
   return true;
 }
 function wireConn(c,res){
-  c.on('open',()=>{ Net.conns.push(c); Net.connected=true; setNetTxt(true,'Connected'); if(res) res(true); });
-  c.on('data',d=>{ if(!d||d.v!==1) return; const r=ensureRemote(c.peer); r.st=d; r.t=performance.now(); });
-  c.on('close',()=>{ Net.conns=Net.conns.filter(x=>x!==c); removeRemote(c.peer); Net.connected=Net.conns.length>0; setNetTxt(false,'Other player left'); if(!Net.isHost) becomeHost(); });
+  c.on('open',()=>{ Net.conns.push(c); Net.connected=true; setNetTxt(true,'Connected'); if(Net.isHost) startLockstep(true); if(res) res(true); });
+  c.on('data',d=>onNetData(d));
+  c.on('close',()=>{ Net.conns=Net.conns.filter(x=>x!==c); Net.connected=Net.conns.length>0; stopLockstep('Other player left'); });
   c.on('error',()=>{ if(res) res(false); });
 }
-function becomeHost(){ if(Net.isHost) return; Net.isHost=true; Net.joinedAsGuest=false; for(const b of bodies){ b.pos.copy(b.tPos); b.quat.copy(b.tQuat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.wake(); if(b.npc){ const m=remoteNpcMode[b.idx]; b.kinematic=m!==1; b.npc.state=m===1?'rag':m===3?'dance':m===4?'idle':m===5?'hunt':m===6?'fight':m===7?'debate':m===8?'war':m===9?'breakdance':(b.npc.home.state==='ball'?'ball':'walk'); } } centerMsg('You are now the host'); }
 function leaveNet(){
   for(const u of Net.unsubs){ try{u();}catch(e){} } Net.unsubs=[];
+  stopLockstep('Solo');
   if(Net.named){ try{ Net.named.leave(); }catch(e){} Net.named=null; }
   if(Net.room){ Net.room.presence({hosting:null}).catch(()=>{}); }
   if(Net.peer){ try{ Net.peer.destroy(); }catch(e){} Net.peer=null; } Net.conns=[];
-  for(const id of Array.from(Net.remotes.keys())) removeRemote(id);
   Net.mode='solo'; Net.isHost=true; Net.code=''; Net.connected=false;
-  for(const b of bodies){ b.held=null; if(b.driver!=='me') b.driver=null; if(b.npc&&!b.kinematic&&b.npc.state!=='rag'){ b.kinematic=true; } }
+  if(localSlot!==0){ const me=players[localSlot]; const other=players[0]; const mesh=me.mesh, name=me.name, color=me.color; resetPlayerState(other); other.mesh=mesh; other.name=name; other.color=color; other.active=true; me.active=false; me.mesh=null; localSlot=0; player=players[0]; }
   setNetTxt(false,'Solo'); $('codeBox').hidden=true;
 }
-function packState(){
-  const st={v:1,nm:player.name,c:player.color,p:[r2(player.pos.x),r2(player.pos.y),r2(player.pos.z)],ry:r2(player.yaw),an:player.an,sc:player.score,host:Net.isHost?1:0,held:player.driving?player.driving.idx:(player.held?player.held.idx:-1),drv:player.driving?1:0,hits:myHits,sp:r2(player.spin),rq:null,b:null,nm2:null,pl:Net.isHost?PLANE.flightStart:0,fly:(!Net.isHost&&PLANE.flyRequest&&Date.now()-PLANE.flyRequest<4000)?PLANE.flyRequest:0};
-  if(player.rag){ const q=player.rag.quat; st.rq=[r3(q.x),r3(q.y),r3(q.z),r3(q.w)]; }
-  if(Net.isHost){
-    const awake=[], asleep=[]; for(const b of bodies){ if(b.asleep&&!b.held) asleep.push(b); else awake.push(b); }
-    const list=[]; const NA=36, NS=8;
-    if(awake.length<=NA) list.push(...awake); else { sendRotA=(sendRotA+NA)%awake.length; for(let i=0;i<NA;i++) list.push(awake[(sendRotA+i)%awake.length]); }
-    if(asleep.length){ sendRotS=(sendRotS+NS)%asleep.length; for(let i=0;i<Math.min(NS,asleep.length);i++) list.push(asleep[(sendRotS+i)%asleep.length]); }
-    st.b=list.map(b=>[b.idx,r2(b.pos.x),r2(b.pos.y),r2(b.pos.z),r3(b.quat.x),r3(b.quat.y),r3(b.quat.z),r3(b.quat.w)]);
-    st.nm2=npcs.map(npcMode);
-  }
-  return st;
-}
-let lastSend=0, sendRotA=0, sendRotS=0;
-function netTick(now,dt){
-  if(Net.mode!=='online') return;
-  // apply remote state
-  let hostSeen=false;
-  for(const [id,r] of Net.remotes){
-    if(now-r.t>8000){ removeRemote(id); continue; }
-    const st=r.st; if(!st) continue;
-    if(st.host){ hostSeen=true; Net.lastHostSeen=now;
-      if(!Net.isHost&&typeof st.pl==='number'&&st.pl!==PLANE.flightStart){ PLANE.flightStart=st.pl; }
-      if(!Net.isHost&&Array.isArray(st.b)){
-        for(const a of st.b){ if(!Array.isArray(a)||a.length<8) continue; const b=bodies[a[0]|0]; if(!b) continue; b.tPos.set(+a[1]||0,+a[2]||0,+a[3]||0); b.tQuat.set(+a[4]||0,+a[5]||0,+a[6]||0,+a[7]||1).normalize(); }
-        if(Array.isArray(st.nm2)) for(let i=0;i<npcs.length;i++){ const bi=npcs[i].body.idx, nm=st.nm2[i]|0;
-          if(nm===1&&remoteNpcMode[bi]!==1){ // a pedestrian just went down: was it one of my flung props?
-            const nb=npcs[i].body; for(const o of bodies){ if(o.lastHitBy==='me'&&now-(o.lastHitT||0)<4000&&o.pos.distanceTo(nb.pos)<3){ trick(npcTrick(npcs[i].role),npcPts(npcs[i].role)); o.lastHitBy=null; break; } } }
-          remoteNpcMode[bi]=nm; }
-      }
-    }
-    if(Net.isHost){
-      // held props
-      const h=typeof st.held==='number'?st.held:-1;
-      if(st.fly&&!PLANE.flightStart&&Date.now()-st.fly<4000){ PLANE.flightStart=st.fly; }
-      if(r.heldIdx!==h){ if(r.heldIdx>=0&&bodies[r.heldIdx]){ if(bodies[r.heldIdx].held===id) bodies[r.heldIdx].held=null; if(bodies[r.heldIdx].driver===id) bodies[r.heldIdx].driver=null; } r.heldIdx=h; if(h>=0&&bodies[h]&&!bodies[h].held&&!bodies[h].driver){ if(st.drv){ bodies[h].driver=id; bodies[h].wake(); } else { bodies[h].held=id; bodies[h].wake(); if(bodies[h].npc&&bodies[h].npc.state!=='rag') ragdollNPC(bodies[h].npc,null,null); } } }
-      if(h>=0&&bodies[h]&&bodies[h].driver===id&&Array.isArray(st.p)){ const b=bodies[h]; const ry=+st.ry||0; tv.set(+st.p[0],b.half.y,+st.p[2]); b.vel.copy(tv).sub(b.pos).divideScalar(Math.max(dt,0.001)); if(b.vel.length()>40) b.vel.setLength(40); b.pos.copy(tv); tq.setFromAxisAngle(UP,ry); b.quat.copy(tq); b.angVel.set(0,0,0); b.lastHitBy=id; b.lastHitT=performance.now(); }
-      if(h>=0&&bodies[h]&&bodies[h].held===id&&Array.isArray(st.p)){ const b=bodies[h]; const ry=+st.ry||0; const anchor=new V3(+st.p[0]-Math.sin(ry)*1.3,+st.p[1]+1.1+b.half.y*0.5,+st.p[2]-Math.cos(ry)*1.3); tv.copy(anchor).sub(b.pos); b.vel.copy(tv).divideScalar(Math.max(dt,0.001)).multiplyScalar(0.5); b.pos.lerp(anchor,Math.min(1,14*dt)); tq.setFromAxisAngle(UP,ry); b.quat.slerp(tq,Math.min(1,6*dt)); b.angVel.set(0,0,0); }
-      // hits
-      if(Array.isArray(st.hits)) for(const hh of st.hits){ if(!Array.isArray(hh)||hh.length<8) continue; const seq=+hh[0]; if(seq<=r.lastSeq) continue; r.lastSeq=seq; const b=bodies[hh[1]|0]; if(!b||(b.held&&b.held!=='npc')||b.driver) continue; if(b.held==='npc') b.held=null; const imp=new V3(+hh[2]||0,+hh[3]||0,+hh[4]||0); if(imp.length()>200) imp.setLength(200); const pt=new V3(+hh[5]||0,+hh[6]||0,+hh[7]||0); if(b.npc&&b.npc.state!=='rag'&&imp.length()>2.5) ragdollNPC(b.npc,imp,null); else b.applyImpulse(imp,pt); b.lastHitBy=id; }
-    }
-  }
-  if(Net.isHost&&hostSeen&&Net.joinedAsGuest){ Net.isHost=false; } // the original host is back; yield
-  if(!Net.isHost&&!hostSeen&&now-Net.lastHostSeen>4000){
-    // nobody hosting: the lowest peer label takes over
-    const ids=Array.from(Net.remotes.keys()); ids.push(Net.myId); ids.sort();
-    if(Net.kind==='room'&&Net.connected&&ids[0]===Net.myId){ becomeHost(); Net.lastHostSeen=now; }
-  }
-  if(now-lastSend>50){ lastSend=now; const st=packState();
-    if(Net.kind==='room'&&Net.named){ Net.named.presence(st).catch(()=>{}); }
-    else if(Net.kind==='peer'){ for(const c of Net.conns){ if(c.open){ try{ c.send(st); }catch(e){} } } }
-  }
-}
-function updateRemotes(dt,t){
-  for(const r of Net.remotes.values()){
-    const st=r.st; if(!st||!Array.isArray(st.p)) continue;
-    const ci=clamp(st.c|0,0,FURS.length-1);
-    if(!r.mesh||r.color!==ci){ if(r.mesh) scene.remove(r.mesh.holder); r.mesh=makeSquirrel(FURS[ci].c); r.color=ci; scene.add(r.mesh.holder); r.pos.set(+st.p[0],+st.p[1],+st.p[2]); }
-    tv.set(+st.p[0]||0,+st.p[1]||0,+st.p[2]||0);
-    if(r.t!==r.lastT){ if(r.lastP){ const span=Math.max(0.02,(r.t-r.lastT)/1000); if(span<1){ r.vel.set((tv.x-r.lastP.x)/span,0,(tv.z-r.lastP.z)/span); if(r.vel.length()>14) r.vel.setLength(14); } else r.vel.set(0,0,0); } r.lastP=r.lastP||new V3(); r.lastP.copy(tv); r.lastT=r.t; }
-    const sp=tv.distanceTo(r.pos)/Math.max(dt,0.001);
-    r.pos.lerp(tv,Math.min(1,14*dt));
-    const ry=+st.ry||0; let dy=ry-r.yaw; dy=Math.atan2(Math.sin(dy),Math.cos(dy)); r.yaw+=dy*Math.min(1,14*dt);
-    const h=r.mesh.holder; h.position.copy(r.pos); h.position.y+=st.drv?1.45:0.4;
-    const an=st.an|0;
-    if(an===3&&Array.isArray(st.rq)){ tq.set(+st.rq[0],+st.rq[1],+st.rq[2],+st.rq[3]).normalize(); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
-    else if(an===4){ tq.setFromAxisAngle(UP,r.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
-    else { tq.setFromAxisAngle(UP,r.yaw); h.quaternion.slerp(tq,Math.min(1,14*dt)); }
-    animSquirrel(r.mesh,an,Math.min(sp,12),t,dt,+st.sp||0);
-  }
+function renderSquirrel(P,dt,t){
+  if(!P.mesh) setPlayerMesh(P,P.color);
+  const m=P.mesh, h=m.holder; h.visible=P.active; if(!P.active) return;
+  h.position.copy(P.pos); h.position.y+=P.driving?1.45:0.4;
+  if(P.rag){ h.quaternion.copy(P.rag.quat); }
+  else if(P.climbing){ tq.setFromAxisAngle(UP,P.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,16*dt)); }
+  else { tq.setFromAxisAngle(UP,P.yaw); if(P.headbuttT>0){ tq2.setFromAxisAngle(new V3(1,0,0),Math.sin(P.headbuttT/0.25*Math.PI)*0.9); tq.multiply(tq2); } h.quaternion.slerp(tq,Math.min(1,16*dt)); }
+  animSquirrel(m,P.an,Math.hypot(P.vel.x,P.vel.z),t,dt,P.spin);
 }
 
 // ---------------- day and night ----------------
@@ -1673,8 +1710,8 @@ function updateDayNight(){
 function updateClub(dt,t){
   let vol=0, loud=null; const bt=beatTime(), beat=Math.floor(bt), frac=bt-beat, pulse=Math.pow(1-frac,3);
   for(const P of PARTIES){
-    const d=Math.hypot(player.pos.x-P.x,player.pos.z-P.z,(player.pos.y-(P.y0+1))*0.5);
-    const pv=P.inside?0.55:Math.max(0,0.55*(1-Math.max(0,d-13)/32)); if(pv>vol){ vol=pv; loud=P; }
+    const LP=players[localSlot]; const d=Math.hypot(LP.pos.x-P.x,LP.pos.z-P.z,(LP.pos.y-(P.y0+1))*0.5);
+    const pv=players[localSlot].pin[PARTIES.indexOf(P)]?0.55:Math.max(0,0.55*(1-Math.max(0,d-13)/32)); if(pv>vol){ vol=pv; loud=P; }
     if(d>80) continue;
     const pal=P.pal||CLUBPAL;
     for(const tl of P.tiles){ const k=(tl.i+tl.j+beat)%pal.length; tl.m.material.color.setHex(pal[k]); tl.m.material.color.multiplyScalar(0.55+0.45*pulse*((tl.i+tl.j+beat)%3===0?1:0.5)); }
@@ -1690,68 +1727,65 @@ function updateClub(dt,t){
   if(whimsy.leds) whimsy.leds.forEach((l,i)=>l.material.color.setHex((beat+i)%3===0?0xff3621:0x3dff7a));
   if(whimsy.quotes){ const q=Math.floor(t/3.5)%whimsy.quotes.length; whimsy.quotes.forEach((m,i)=>m.visible=i===q); }
 }
-function updateWhimsy(dt,t){
-  const now=performance.now(), W=whimsy;
-  // UFO circling the park, beaming up whoever stands under it
-  const ph=((Date.now()/1000)%50)/50*Math.PI*2; W.ufo.position.set(-20+Math.cos(ph)*16,17.5,-20+Math.sin(ph)*16); W.ufo.rotation.y=t*0.6; W.beam.material.opacity=0.12+0.06*Math.sin(t*5);
-  if(!menuOpen&&!player.rag&&!player.climbing){ const ud=Math.hypot(player.pos.x-W.ufo.position.x,player.pos.z-W.ufo.position.z);
-    if(ud<2.5&&player.pos.y<16){ player.vel.y=5.5; player.vel.x*=0.9; player.vel.z*=0.9; player.grounded=false; player.spinV=6;
-      if(player.pos.y>14.5&&now>W.abductCd){ W.abductCd=now+30000; trick('ABDUCTED',100); centerMsg('ABDUCTED','welcome to the mothership'); player.pos.set(ALIEN.x,ALIEN.y+0.3,ALIEN.z+3); player.vel.set(0,0,0); cam.pos.set(0,0,0); beep(500,0.6,'sine',0.05); } } }
-  // ghost drifting through the graveyard
-  W.ghost.ang+=dt*0.35; const gx=-62+Math.cos(W.ghost.ang)*8, gz=27+Math.sin(W.ghost.ang*1.3)*4; W.ghost.g.position.set(gx,0.4+Math.sin(t*2)*0.35,gz); W.ghost.g.rotation.y=-W.ghost.ang+Math.PI/2;
-  if(!menuOpen&&!player.rag&&now>W.ghostCd&&Math.hypot(player.pos.x-gx,player.pos.z-gz)<1.3&&player.pos.y<2){ W.ghostCd=now+8000; player.vel.y=13; player.grounded=false; trick('BOO',25); centerMsg('BOO!'); beep(90,0.5,'sawtooth',0.05); }
-  // pigeons scatter and come back
+function updateWhimsy(dt,t){ // world-side effects (deterministic), plus purely visual motion
+  const W=whimsy, st=simNow()/1000;
+  const ph=((st)%50)/50*Math.PI*2; W.ufo.position.set(-20+Math.cos(ph)*16,17.5,-20+Math.sin(ph)*16); W.ufo.rotation.y=t*0.6; W.beam.material.opacity=0.12+0.06*Math.sin(t*5);
+  W.ghost.ang+=dt*0.35; const gx=-62+Math.cos(W.ghost.ang)*8, gz=27+Math.sin(W.ghost.ang*1.3)*4; W.ghost.g.position.set(gx,0.4+Math.sin(t*2)*0.35,gz); W.ghost.g.rotation.y=-W.ghost.ang+Math.PI/2; W.gx=gx; W.gz=gz;
   for(const pg of W.pigeons){ const g=pg.g;
     if(pg.fly>0){ pg.fly-=dt; g.position.x+=pg.vx*dt; g.position.z+=pg.vz*dt; g.position.y=Math.min(7,g.position.y+4*dt); g.rotation.z=Math.sin(t*30)*0.5; }
-    else { g.position.x+=(pg.hx-g.position.x)*dt*0.8; g.position.z+=(pg.hz-g.position.z)*dt*0.8; g.position.y+=(0.14-g.position.y)*dt*1.5; g.rotation.z=0; g.rotation.y+=dt*0.6; g.position.y+=Math.abs(Math.sin(t*12+pg.hx))*0.01;
-      const pd=Math.hypot(player.pos.x-g.position.x,player.pos.z-g.position.z); if(!menuOpen&&pd<3.2){ pg.fly=2.5+rng(); const ax=g.position.x-player.pos.x, az=g.position.z-player.pos.z, al=Math.hypot(ax,az)||1; pg.vx=ax/al*6; pg.vz=az/al*6; if(now>W.pigeonCd){ W.pigeonCd=now+8000; trick('FLOCK OFF',10); } } } }
-  // golden acorn on the roof
-  if(W.golden&&!W.goldenTaken){ W.golden.rotation.y=t; W.golden.position.y=21.3+Math.sin(t*2)*0.15; if(player.pos.distanceTo(W.golden.position)<1.6){ W.goldenTaken=true; W.golden.visible=false; trick('GOLDEN ACORN',500); centerMsg('GOLDEN ACORN','the legends were true'); } }
+    else { g.position.x+=(pg.hx-g.position.x)*dt*0.8; g.position.z+=(pg.hz-g.position.z)*dt*0.8; g.position.y+=(0.14-g.position.y)*dt*1.5; g.rotation.z=0; g.rotation.y+=dt*0.6; g.position.y+=Math.abs(Math.sin(t*12+pg.hx))*0.01; } }
+  if(W.golden&&!W.goldenTaken){ W.golden.rotation.y=t; W.golden.position.y=21.3+Math.sin(t*2)*0.15; }
   for(const o of W.orbs){ o.m.position.y=o.y+Math.sin(t*1.2+o.ph)*0.5; o.m.rotation.y=t; }
-  // the cat is gone; it was mean
-  if(W.cat&&!menuOpen&&!player.rag&&now>(W.catCd||0)){ const cb=W.cat.body; const mode=Net.isHost?npcMode(W.cat):remoteNpcMode[cb.idx]; if(mode===5&&Math.hypot(player.pos.x-cb.pos.x,player.pos.z-cb.pos.z)<1.3&&Math.abs(player.pos.y-cb.pos.y)<1.2){ W.catCd=now+7000; enterRagdoll(new V3((rng()-0.5)*10,7,(rng()-0.5)*10)); centerMsg('CAT ATTACK','climb a tree next time'); beep(600,0.3,'sawtooth',0.05); } }
-  // duck bobs on the fountain
-  if(W.duck&&Net.isHost&&W.duck.asleep&&Math.hypot(W.duck.pos.x+20,W.duck.pos.z+20)<3.6){ W.duck.mesh.position.y=W.duck.pos.y+Math.sin(t*2)*0.06; W.duck.mesh.rotation.z=Math.sin(t*1.5)*0.08; }
+  if(W.duck&&W.duck.asleep&&Math.hypot(W.duck.pos.x+20,W.duck.pos.z+20)<3.6){ W.duck.mesh.position.y=W.duck.pos.y+Math.sin(t*2)*0.06; W.duck.mesh.rotation.z=Math.sin(t*1.5)*0.08; }
+}
+function updateWhimsyPlayer(dt){ // runs per squirrel inside the simulation
+  const W=whimsy, now=simNow();
+  if(!player.rag&&!player.climbing&&!player.driving){ const ud=Math.hypot(player.pos.x-W.ufo.position.x,player.pos.z-W.ufo.position.z);
+    if(ud<2.5&&player.pos.y<16){ player.vel.y=5.5; player.vel.x*=0.9; player.vel.z*=0.9; player.grounded=false; player.spinV=6;
+      if(player.pos.y>14.5&&now>(player.cd.abduct||0)){ player.cd.abduct=now+30000; trick('ABDUCTED',100); centerMsg('ABDUCTED','welcome to the mothership'); player.pos.set(ALIEN.x,ALIEN.y+0.3,ALIEN.z+3); player.vel.set(0,0,0); if(isLocal()) cam.pos.set(0,0,0); beep(500,0.6,'sine',0.05); } } }
+  if(!player.rag&&now>(player.cd.ghost||0)&&Math.hypot(player.pos.x-W.gx,player.pos.z-W.gz)<1.3&&player.pos.y<2){ player.cd.ghost=now+8000; player.vel.y=13; player.grounded=false; trick('BOO',25); centerMsg('BOO!'); beep(90,0.5,'sawtooth',0.05); }
+  for(const pg of W.pigeons){ const g=pg.g; if(pg.fly>0) continue; const pd=Math.hypot(player.pos.x-g.position.x,player.pos.z-g.position.z); if(pd<3.2){ pg.fly=2.5+srng(); const ax=g.position.x-player.pos.x, az=g.position.z-player.pos.z, al=Math.hypot(ax,az)||1; pg.vx=ax/al*6; pg.vz=az/al*6; if(now>(player.cd.pigeon||0)){ player.cd.pigeon=now+8000; trick('FLOCK OFF',10); } } }
+  if(W.golden&&!W.goldenTaken&&player.pos.distanceTo(W.golden.position)<1.6){ W.goldenTaken=true; W.golden.visible=false; trick('GOLDEN ACORN',500); centerMsg('GOLDEN ACORN','the legends were true'); }
 }
 
 // ---------------- HUD ----------------
 let hudT=0;
 function updateHUD(){
-  $('scoreNum').textContent=player.score.toLocaleString();
+  $('scoreNum').textContent=players[localSlot].score.toLocaleString();
   const el=$('players'); el.innerHTML='';
   const row=(name,score,color,isHost,me)=>{ const d=document.createElement('div'); d.className='row'; const l=document.createElement('span'); l.className='nm'; const dot=document.createElement('i'); dot.className='dot'; dot.style.background='#'+FURS[color].c.toString(16).padStart(6,'0'); l.appendChild(dot); l.appendChild(document.createTextNode(name+(me?' (you)':''))); if(isHost){ const hb=document.createElement('span'); hb.className='host'; hb.textContent='HOST'; l.appendChild(hb);} const s=document.createElement('span'); s.textContent=score.toLocaleString(); d.appendChild(l); d.appendChild(s); el.appendChild(d); };
-  row(player.name,player.score,player.color,Net.mode==='online'&&Net.isHost,true);
-  for(const r of Net.remotes.values()){ if(!r.st) continue; row(String(r.st.nm||'Squirrel').slice(0,14),(+r.st.sc||0),clamp(r.st.c|0,0,FURS.length-1),!!r.st.host,false); }
-  if(Net.mode==='online'&&Net.remotes.size===0){ const d=document.createElement('div'); d.className='row'; d.style.color='var(--muted)'; d.textContent='Waiting for a friend…'; el.appendChild(d); }
+  for(const P of players){ if(!P.active) continue; row(P.name,P.score,clamp(P.color|0,0,FURS.length-1),Net.mode==='online'&&P.slot===0,P.slot===localSlot); }
+  if(Net.mode==='online'&&!players[1-localSlot].active){ const d=document.createElement('div'); d.className='row'; d.style.color='var(--muted)'; d.textContent='Waiting for a friend…'; el.appendChild(d); }
+  if(Net.mode==='online'&&Lock.started){ const d=document.createElement('div'); d.className='row'; d.style.color='var(--muted)'; d.textContent=(Lock.desync?'resyncing · ':'in sync · ')+Lock.delay+' tick delay'+(Lock.stallRate>0.2?' · waiting on peer':''); el.appendChild(d); }
 }
 
 // ---------------- input ----------------
 let menuOpen=true;
-function showMenu(open){ menuOpen=open; $('menu').hidden=!open; $('hud').hidden=open; if(open){ if(document.pointerLockElement) document.exitPointerLock(); } else canvas.focus(); if(open&&Net.room) Net.room.presence({nick:player.name,hosting:Net.mode==='online'&&Net.isHost?Net.code:null}).catch(()=>{}); renderGames(); }
+function showMenu(open){ menuOpen=open; $('menu').hidden=!open; $('hud').hidden=open; if(open){ if(document.pointerLockElement) document.exitPointerLock(); } else canvas.focus(); if(open&&Net.room) Net.room.presence({nick:players[localSlot].name,hosting:Net.mode==='online'&&Net.isHost?Net.code:null}).catch(()=>{}); renderGames(); }
 window.addEventListener('keydown',e=>{
   ensureAudio();
   const k=e.key.toLowerCase();
   if(e.target&&e.target.tagName==='INPUT') return;
   if(k==='escape'){ if(!document.pointerLockElement){ showMenu(!menuOpen); } return; }
   if(menuOpen) return;
-  keys[k]=true;
-  if(k===' '){ e.preventDefault(); jump(); }
-  if(k==='f') headbutt();
-  if(k==='e') tailGrab();
-  if(k==='r'){ if(player.rag){ if(player.ragT>0.5) exitRagdoll(); } else enterRagdoll(new V3().copy(player.vel).add(new V3(0,3,0))); }
+  kb[k]=true;
+  if(k===' '){ e.preventDefault(); if(!e.repeat) oneShot.j=true; }
+  if(k==='f'&&!e.repeat) oneShot.f=true;
+  if(k==='e'&&!e.repeat) oneShot.e=true;
+  if(k==='r'&&!e.repeat) oneShot.r=true;
   if(k==='h') $('hint').hidden=!$('hint').hidden;
   if(['arrowup','arrowdown','arrowleft','arrowright'].includes(k)) e.preventDefault();
 });
-window.addEventListener('keyup',e=>{ keys[e.key.toLowerCase()]=false; });
-window.addEventListener('blur',()=>{ for(const k in keys) keys[k]=false; });
+window.addEventListener('keyup',e=>{ kb[e.key.toLowerCase()]=false; });
+window.addEventListener('blur',()=>{ for(const k in kb) kb[k]=false; });
 let dragging=false, lastMX=0, lastMY=0;
 canvas.addEventListener('mousedown',e=>{
   ensureAudio();
   if(menuOpen) return;
   if(e.button===0){
     if(!document.pointerLockElement){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(err){} dragging=true; lastMX=e.clientX; lastMY=e.clientY; }
-    else headbutt();
-  } else if(e.button===2){ tailGrab(); }
+    else oneShot.f=true;
+  } else if(e.button===2){ oneShot.e=true; }
 });
 window.addEventListener('mouseup',()=>{ dragging=false; });
 canvas.addEventListener('contextmenu',e=>e.preventDefault());
@@ -1774,47 +1808,48 @@ let savedFur=0, savedName='';
 try{ savedFur=clamp(parseInt(localStorage.getItem('sq_fur')||'0',10)||0,0,FURS.length-1); savedName=localStorage.getItem('sq_name')||''; }catch(e){}
 setFur(savedFur); sw.querySelectorAll('.swatch').forEach((s,j)=>s.setAttribute('aria-checked',String(j===savedFur)));
 $('nameIn').value=savedName;
-function readName(){ const v=$('nameIn').value.trim().slice(0,14)||'Nutsy'; player.name=v; try{ localStorage.setItem('sq_name',v); }catch(e){} return v; }
+function readName(){ const v=$('nameIn').value.trim().slice(0,14)||'Nutsy'; players[localSlot].name=v; try{ localStorage.setItem('sq_name',v); }catch(e){} return v; }
 function startPlay(){ showMenu(false); if(Net.mode==='online'){ $('codeBox').hidden=false; $('codeTxt').textContent=Net.code; } else $('codeBox').hidden=true; updateHUD(); }
 $('soloBtn').addEventListener('click',()=>{ ensureAudio(); readName(); if(Net.mode==='online') leaveNet(); setStatus(''); startPlay(); });
 $('hostBtn').addEventListener('click',async()=>{ readName(); if(Net.mode==='online') leaveNet(); $('hostBtn').disabled=true; setStatus('Opening a game…'); const ok=await hostGame(); $('hostBtn').disabled=false; if(ok){ setStatus(''); startPlay(); centerMsg('Game code: '+Net.code,'Tell your friend to join with it'); if(Net.kind==='room') setNetTxt(true,'Waiting for a player…'); } });
 async function joinGame(code){ readName(); code=(code||'').toUpperCase().replace(/[^A-Z0-9]/g,''); if(code.length!==4){ setStatus('Codes are 4 letters or digits.',true); return; } if(Net.mode==='online') leaveNet(); $('joinBtn').disabled=true; setStatus('Joining '+code+'…'); const ok=await joinGameNet(code); $('joinBtn').disabled=false; if(ok){ setStatus(''); startPlay(); if(Net.kind==='room') setNetTxt(true,'Looking for the host…'); } }
 $('joinBtn').addEventListener('click',()=>joinGame($('codeIn').value));
 $('codeIn').addEventListener('keydown',e=>{ if(e.key==='Enter') joinGame($('codeIn').value); });
-$('nameIn').addEventListener('change',()=>{ readName(); if(Net.room) Net.room.presence({nick:player.name}).catch(()=>{}); });
+$('nameIn').addEventListener('change',()=>{ readName(); if(Net.room) Net.room.presence({nick:players[localSlot].name}).catch(()=>{}); });
 
-// ---------------- main loop ----------------
-let last=performance.now(), t0=last;
+// ---------------- main loop: fixed 60 Hz simulation, rendering in between ----------------
+let last=performance.now(), t0=last, acc=0;
 function resize(){ const w=canvas.clientWidth, h=canvas.clientHeight; if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
+function canStep(){ if(Net.mode!=='online'||!Lock.started) return true; return Lock.remoteInputs.has(simTick); }
+function advance(realDt){
+  acc+=realDt; let steps=0;
+  while(acc>=TICK&&steps<4){
+    Lock.stepWin++;
+    if(!canStep()){ Lock.stalls++; Lock.stallWin++; acc=Math.min(acc,TICK); break; }
+    const inp=captureInput(); Lock.localInputs.set(simTick+Lock.delay,inp); for(let k=simTick;k<simTick+Lock.delay;k++) if(!Lock.localInputs.has(k)) Lock.localInputs.set(k,inp);
+    simStep(); acc-=TICK; steps++;
+  }
+  if(steps===4) acc=0;
+  if(Lock.stepWin>=120){ Lock.stallRate=Lock.stallWin/Lock.stepWin; Lock.stepWin=0; Lock.stallWin=0; if(Lock.started&&Lock.stallRate>0.5&&Lock.delay<12) Lock.delay+=2; }
+}
 function frame(now){
   requestAnimationFrame(frame);
-  const dt=Math.max(0,Math.min(0.033,(now-last)/1000)); last=now; const t=(now-t0)/1000;
+  const dt=Math.max(0,Math.min(0.25,(now-last)/1000)); last=now; const t=(now-t0)/1000;
   resize();
-  if(!menuOpen) updatePlayer(dt,t);
-  if(Net.isHost){
-    for(const b of bodies) stepBody(b,dt);
-    collideBodies(dt);
-    updateNPCs(dt);
-  } else {
-    for(const b of bodies){ if(b.held==='me') continue; tv.copy(b.pos); b.pos.lerp(b.tPos,Math.min(1,12*dt)); b.quat.slerp(b.tQuat,Math.min(1,12*dt)); b.vel.subVectors(b.pos,tv).divideScalar(Math.max(dt,0.001)); }
-  }
-  netTick(now,dt);
-  updateDayNight(); updatePlane(dt); updateClub(dt,t); updateWhimsy(dt,t); updateWar(dt,t);
-  // meshes
-  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=Net.isHost?npcMode(b.npc):remoteNpcMode[b.idx]; const sp=Net.isHost?b.vel.length():b.pos.distanceTo(b.tPos)*12; animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===9) breakdancePose(b,t); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
+  advance(dt);
+  netFrame(now);
+  player=players[localSlot];
+  updateDayNight(); updateClub(dt,t);
+  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=npcMode(b.npc); const sp=b.vel.length(); animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===9) breakdancePose(b,t); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
   for(const a of acorns){ if(!a.taken){ a.mesh.position.y=0.35+Math.sin(t*2+a.phase)*0.06; a.mesh.rotation.y=t+a.phase; } }
-  // my squirrel
-  const m=player.mesh, h=m.holder; h.position.copy(player.pos); h.position.y+=player.driving?1.45:0.4;
-  if(player.rag){ h.quaternion.copy(player.rag.quat); }
-  else if(player.climbing){ tq.setFromAxisAngle(UP,player.yaw); tq2.setFromAxisAngle(new V3(1,0,0),-Math.PI/2); tq.multiply(tq2); h.quaternion.slerp(tq,Math.min(1,16*dt)); }
-  else { tq.setFromAxisAngle(UP,player.yaw); if(player.headbuttT>0){ tq2.setFromAxisAngle(new V3(1,0,0),Math.sin(player.headbuttT/0.25*Math.PI)*0.9); tq.multiply(tq2); } h.quaternion.slerp(tq,Math.min(1,16*dt)); }
-  animSquirrel(m,player.an,Math.hypot(player.vel.x,player.vel.z),t,dt,player.spin);
-  updateRemotes(dt,t);
+  for(const w of whimsy.pigeons){}
+  for(const P of players) renderSquirrel(P,dt,t);
+  for(const sm of WAR.smoke){ sm.g.children.forEach((s2,k)=>{ s2.position.y=((k*1.3+t*1.2+sm.ph)%7); s2.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s2.material.opacity=0.45*(1-s2.position.y/7); }); }
   updateCamera(dt);
   hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
   if(!window.__sq||!window.__sq.skipRender) renderer.render(scene,camera);
 }
-window.__sq={player,bodies,npcs,trees,headbutt,tailGrab,enterRagdoll,Net,cam,whimsy,CLUB,statics,frame,packState,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,enterCar,exitCar,tryFly,WAR,CONCERT};
+window.__sq={get player(){return players[localSlot];},players,get localSlot(){return localSlot;},bodies,npcs,trees,Net,cam,whimsy,CLUB,statics,frame,advance,simStep,resetWorld,worldHash,Lock,get simTick(){return simTick;},captureInput,oneShot:()=>oneShot,kb,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,WAR,CONCERT,setLocalInput:(t,i)=>Lock.localInputs.set(t,i),act:(fn)=>{ player=players[localSlot]; return fn(); },headbutt,tailGrab,enterRagdoll,enterCar,exitCar,tryFly};
 requestAnimationFrame(frame);
 detectNet();
 })();
