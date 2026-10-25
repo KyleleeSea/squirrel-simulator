@@ -37,6 +37,7 @@ input[type=text]::placeholder{color:#7d917f}
 .hud .pe{pointer-events:auto}
 .score{grid-column:1;grid-row:1;justify-self:start}
 .score .label{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--leaf);font-weight:800}
+.score .chip{display:inline-block;margin-top:6px;font-size:12px;letter-spacing:.16em;font-weight:800;color:var(--ink);background:var(--leaf);border-radius:999px;padding:3px 10px;animation:pop .2s ease-out}
 .score .num{font-family:var(--display);font-size:clamp(34px,6vw,54px);line-height:1;color:var(--fg);text-shadow:0 3px 0 var(--ink),0 0 18px rgba(0,0,0,.35);font-variant-numeric:tabular-nums}
 .toasts{grid-column:2;grid-row:1;display:flex;flex-direction:column;align-items:center;gap:6px;min-width:0;max-width:min(60vw,560px)}
 .toast{font-family:var(--display);font-size:clamp(18px,3vw,28px);color:var(--accent);text-shadow:0 2px 0 var(--ink),0 0 14px rgba(0,0,0,.4);animation:pop .25s ease-out, fade .5s 1.3s forwards;text-align:center;text-wrap:balance;max-width:100%}
@@ -102,13 +103,13 @@ h1 span{color:var(--leaf)}
   <canvas id="c" tabindex="0" aria-label="Squirrel Simulator game view"></canvas>
 
   <div class="hud" id="hud" hidden>
-    <div class="score"><div class="label">Squirrel points</div><div class="num" id="scoreNum">0</div></div>
+    <div class="score"><div class="label">Squirrel points</div><div class="num" id="scoreNum">0</div><div class="chip" id="sprintChip" hidden>SPRINT</div></div>
     <div class="toasts" id="toasts"></div>
     <div class="players" id="players"></div>
     <button class="ghost pe menubtn" id="menuBtn" type="button">Menu (Esc)</button>
     <div class="center" id="centerMsg" hidden></div>
     <div class="hint" id="hint">
-      <b>Click the game</b> to grab the mouse. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> run · <kbd>Shift</kbd> sprint · <kbd>Space</kbd> jump (twice for a tail flip) ·
+      <b>Click the game</b> to grab the mouse. <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> run · <kbd>Shift</kbd> hold to sprint · <kbd>Space</kbd> jump (twice for a tail flip) ·
       <kbd>F</kbd> / left click headbutt · <kbd>E</kbd> / right click tail-grab, fling, hop in a car, ride an elevator, fly the plane · <kbd>R</kbd> ragdoll · run at a tree trunk to climb it · sprint into doors to break in.
     </div>
     <div class="bottomright">
@@ -1590,7 +1591,7 @@ function updatePlayer(dt,t){
     player.an=4; player.vel.set(0,0,0);
     return;
   }
-  const speed=player.sprint?10.5:6.2, accel=player.grounded?45:14;
+  const speed=player.sprint?13:6.2, accel=player.grounded?(player.sprint?60:45):14;
   player.vel.x=approach(player.vel.x,move.x*speed,accel*dt); player.vel.z=approach(player.vel.z,move.z*speed,accel*dt);
   const onMoon=Math.hypot(player.pos.x-whimsy.moon.x,player.pos.z-whimsy.moon.z)<whimsy.moon.r&&player.pos.y<12;
   player.vel.y-=G*(onMoon?0.28:1)*dt;
@@ -1652,6 +1653,7 @@ function updateCamera(dt){
   if(tv2.y<0.35) tv2.y=0.35;
   if(cam.pos.lengthSq()===0) cam.pos.copy(tv2); else cam.pos.lerp(tv2,1-Math.exp(-14*dt));
   camera.position.copy(cam.pos); camera.lookAt(target);
+  const LP0=players[localSlot]; const moving=Math.hypot(LP0.vel.x,LP0.vel.z)>4; const fovT=(LP0.sprint&&moving&&!LP0.driving)?74:(LP0.driving&&Math.abs(LP0.carSpeed)>12?70:60); if(Math.abs(camera.fov-fovT)>0.05){ camera.fov+=(fovT-camera.fov)*Math.min(1,6*dt); camera.updateProjectionMatrix(); }
   const LP=players[localSlot]; const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); const sx=Math.round(LP.pos.x/2)*2, sz=Math.round(LP.pos.z/2)*2; sun.position.set(sx+40*(1-el)+15,12+el*70,sz+22); sun.target.position.set(sx,0,sz); sun.target.updateMatrixWorld();
   updateLightPool(cam.pos);
 }
@@ -2039,6 +2041,7 @@ function frame(now){
   PLANE.group.position.set((PLANE.pX==null?PLANE.x:PLANE.pX)+((PLANE.x-(PLANE.pX==null?PLANE.x:PLANE.pX))*alpha),(PLANE.pY==null?PLANE.y:PLANE.pY)+((PLANE.y-(PLANE.pY==null?PLANE.y:PLANE.pY))*alpha),(PLANE.pZ==null?PLANE.z:PLANE.pZ)+((PLANE.z-(PLANE.pZ==null?PLANE.z:PLANE.pZ))*alpha));
   for(const sm of WAR.smoke){ sm.g.children.forEach((s2,k)=>{ s2.position.y=((k*1.3+t*1.2+sm.ph)%7); s2.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s2.material.opacity=0.45*(1-s2.position.y/7); }); }
   updateCamera(dt);
+  { const LP1=players[localSlot]; const on=LP1.sprint&&Math.hypot(LP1.vel.x,LP1.vel.z)>4&&!LP1.driving&&!LP1.rag; const chip=$('sprintChip'); if(chip.hidden===on) chip.hidden=!on; }
   hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
   if(!window.__sq||!window.__sq.skipRender) renderer.render(scene,camera);
 }
