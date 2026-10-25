@@ -121,7 +121,7 @@ h1 span{color:var(--leaf)}
     <div class="card">
       <div>
         <h1>Squirrel <span>Simulator</span></h1>
-        <p class="tag">Be the nuisance this city deserves. Drive cars, break into every building, crash the rave, the frat party and the debate, dunk on LeBron, get abducted, and fly the plane.</p>
+        <p class="tag">Be the nuisance this city deserves. Drive cars, break into every building, crash a rave, a wedding, a war and a Kendrick show, dunk on LeBron, get abducted, and fly the plane.</p>
       </div>
       <div class="field">
         <label for="nameIn">Your name</label>
@@ -226,6 +226,8 @@ function signPlane(text,w,color,bg){
 const WALL=0.4, DOORW=2.0;
 const CLUBPAL=[0xff2d95,0x2de2ff,0xb14cff,0x3dff7a,0xfff23d,0xff6a2d];
 const PARTIES=[]; // dance zones: lights, tiles and the shared beat
+const ZONES=[{name:'ROUND 1. FIGHT!',pts:50,x:-60,z:-26,hx:4,hz:4,y0:0.6,y1:4},{name:'HOT MIC',pts:40,x:60,z:-50,hx:7,hz:3,y0:0.6,y1:4},{name:'TIP OFF',pts:20,x:60,z:22,hx:7.5,hz:14,y0:-1,y1:2},{name:'ENROLLED',pts:60,x:-20,z:62,hx:13,hz:6,y0:-1,y1:9},{name:'DATA + AI SUMMIT',pts:60,x:20,z:62,hx:11,hz:8,y0:-1,y1:7},{name:'TERMINAL',pts:20,x:96,z:40,hx:7,hz:4,y0:-1,y1:7},{name:'GRAVE ROBBER',pts:60,x:-54,z:30,hx:2,hz:2,y0:-1,y1:4}];
+for(const z of ZONES) z.cd=0;
 const COMPANY_NAMES=['ACORN CAPITAL','NUTFLIX','TREEHOUSE LABS','OAK STREET BANK','CHIPMUNK & CO LAW','BURROW INSURANCE','PINECONE SYSTEMS','HAZELNUT MEDIA','WALNUT WEALTH','CACHE STORAGE INC','SQUIRREL & SONS'];
 let companyIdx=0, residentIdx=0;
 function addDoor(x,z,yaw,color,name){ const g=new THREE.Group(); const panel=box(1.9,2.6,0.12,color); g.add(panel); const knob=sphere(0.06,0xffd23a,6,4); knob.position.set(0.7,0,0.1); g.add(knob); const b=addBody('door',new V3(0.95,1.3,0.06),4,x,z,yaw,g,{e:0.1,mu:0.9,label:'door'}); b.asleep=true; b.building=name; return b; }
@@ -461,7 +463,8 @@ makeBuilding({x:-20,z:20,w:24,d:18,h:6,color:0xf0ead6,floor:0xe8e4d8,roofColor:0
 makeBuilding({x:20,z:20,w:20,d:20,h:5,color:0xcfd6dd,floor:0xbfc4c8,roofColor:0x8e969e,door:'-z',sign:'OAKCORP',signColor:'#f4f0e4',signBg:'#1d3a2a',interior:lobbyInterior,name:'OakCorp',windowsFront:false});
 { const tw=new THREE.Mesh(new THREE.BoxGeometry(16,24,16),windowMaterial(16,24,0x6f7f90)); tw.position.set(20,5.3+12,20); tw.castShadow=true; scene.add(tw); addStatic(20,17.3,20,8,12,8); }
 // downtown towers and big solid buildings
-for(const [x,z,w,d,h,c] of [[-62,-62,14,14,30,0x5c6b7c],[-50,-70,10,10,18,0x7a8699],[-70,-50,10,12,22,0x8c7a6b],[62,62,16,16,34,0x4f5e70],[70,50,10,10,16,0x9aa3ad],[52,70,12,10,20,0x6f7f90],[66,-64,14,12,24,0x6b5c7c],[52,-72,10,10,14,0x8a7f9a],[-66,62,12,12,26,0x5f6f82],[-52,70,10,10,15,0x7f8a99]]) makeBuilding({x,z,w,d,h,color:c,windows:true,interior:towerInterior,name:'office tower',floor:0xbfc4c8});
+for(const [x,z,w,d,h,c] of [[-62,-62,14,14,30,0x5c6b7c],[-50,-70,10,10,18,0x7a8699],[-70,-50,10,12,22,0x8c7a6b],[62,62,16,16,34,0x4f5e70],[70,50,10,10,16,0x9aa3ad],[52,70,12,10,20,0x6f7f90],[66,-64,14,12,24,0x6b5c7c],[52,-72,10,10,14,0x8a7f9a]]) makeBuilding({x,z,w,d,h,color:c,windows:true,interior:towerInterior,name:'office tower',floor:0xbfc4c8});
+makeChurch(); weddingOutside(-60,42.5);
 makeBuilding({x:-20,z:-62,w:28,d:16,h:9,color:0xd9c7a8,windows:true,interior:mallInterior,name:'Pine Plaza',roomH:9,floor:0xe8e4d8,door:'+z'});
 { const s=signPlane('PINE PLAZA',9,'#2a2a30','#f6e7a8'); s.position.set(-20,7.5,-53.7); scene.add(s); }
 // gas station canopy
@@ -828,8 +831,187 @@ function terminalInterior(g,o){
   for(let i=0;i<3;i++) addNPC(o.x-5+i*5,o.z+2.5,Math.PI,'idle','traveler',175+i,0);
 }
 // score zones for the arenas
-const ZONES=[{name:'ROUND 1. FIGHT!',pts:50,x:-60,z:-26,hx:4,hz:4,y0:0.6,y1:4},{name:'HOT MIC',pts:40,x:60,z:-50,hx:7,hz:3,y0:0.6,y1:4},{name:'TIP OFF',pts:20,x:60,z:22,hx:7.5,hz:14,y0:-1,y1:2},{name:'ENROLLED',pts:60,x:-20,z:62,hx:13,hz:6,y0:-1,y1:9},{name:'DATA + AI SUMMIT',pts:60,x:20,z:62,hx:11,hz:8,y0:-1,y1:7},{name:'TERMINAL',pts:20,x:96,z:40,hx:7,hz:4,y0:-1,y1:7},{name:'GRAVE ROBBER',pts:60,x:-54,z:30,hx:2,hz:2,y0:-1,y1:4}];
-for(const z of ZONES) z.cd=0;
+
+// ---------------- St. Acorn's Cathedral ----------------
+function stainedGlass(w,h){ const c=document.createElement('canvas'); c.width=128; c.height=256; const x=c.getContext('2d'); const cols=['#b5162b','#2f7de1','#ffe66d','#3dff7a','#b14cff','#ff8a2a']; for(let i=0;i<8;i++) for(let j=0;j<16;j++){ x.fillStyle=cols[(i*3+j*5+Math.floor(rng()*3))%6]; x.fillRect(i*16,j*16,16,16); } x.strokeStyle='#222'; x.lineWidth=3; for(let i=0;i<=8;i++){ x.beginPath(); x.moveTo(i*16,0); x.lineTo(i*16,256); x.stroke(); } for(let j=0;j<=16;j++){ x.beginPath(); x.moveTo(0,j*16); x.lineTo(128,j*16); x.stroke(); }
+  const m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide})); return m; }
+function roseWindow(r){ const c=document.createElement('canvas'); c.width=c.height=256; const x=c.getContext('2d'); x.fillStyle='#1a1030'; x.fillRect(0,0,256,256); const cols=['#b5162b','#2f7de1','#ffe66d','#3dff7a','#b14cff','#ff8a2a']; for(let ring=0;ring<4;ring++){ const n=6+ring*6; for(let i=0;i<n;i++){ const a=i/n*Math.PI*2; x.fillStyle=cols[(i+ring)%6]; x.beginPath(); x.arc(128+Math.cos(a)*(20+ring*28),128+Math.sin(a)*(20+ring*28),12,0,Math.PI*2); x.fill(); } } x.fillStyle='#ffe66d'; x.beginPath(); x.arc(128,128,14,0,Math.PI*2); x.fill();
+  return new THREE.Mesh(new THREE.CircleGeometry(r,32),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(c),side:THREE.DoubleSide})); }
+function churchInterior(g,o){
+  const stone=0xd8d2c4, wood=0x6b4a2e, h=o.h;
+  for(const x of [-7,7]) for(let z=-10;z<=8;z+=6){ const col=cyl(0.6,0.7,h,0xcfc8b8,10); col.position.set(x,h/2,z); g.add(col); addStatic(o.x+x,h/2,o.z+z,0.6,h/2,0.6); }
+  for(let r=0;r<8;r++) for(const x of [-4.2,4.2]){ const z=-5+r*2; const pew=box(5,0.5,0.5,wood); pew.position.set(x,0.25,z); g.add(pew); const bk=box(5,0.7,0.1,wood); bk.position.set(x,0.6,z+0.25); g.add(bk); addStatic(o.x+x,0.3,o.z+z,2.5,0.3,0.3); }
+  const altar=box(4,1.2,1.4,0xf0ead6); altar.position.set(0,0.6,12); g.add(altar); addStatic(o.x,0.6,o.z+12,2,0.6,0.7); const cloth=box(4.1,0.1,1.5,0xb5162b); cloth.position.set(0,1.2,12); g.add(cloth);
+  const step=box(10,0.4,5,0xcfc8b8); step.position.set(0,0.2,12.5); g.add(step); addStatic(o.x,0.2,o.z+12.5,5,0.2,2.5);
+  const cv=box(0.3,5,0.3,wood); cv.position.set(0,5.5,14.4); g.add(cv); const ch=box(2.4,0.3,0.3,wood); ch.position.set(0,6.8,14.4); g.add(ch);
+  for(const x of [-11.6,11.6]) for(let z=-10;z<=10;z+=5){ const w=stainedGlass(2.2,6); w.position.set(x,9,z); w.rotation.y=x<0?Math.PI/2:-Math.PI/2; g.add(w); const w2=stainedGlass(2.2,6); w2.position.set(x*1.04,9,z); w2.rotation.y=x<0?Math.PI/2:-Math.PI/2; g.add(w2); }
+  const rose=roseWindow(3); rose.position.set(0,13.5,-14.6); g.add(rose); const rose2=roseWindow(3); rose2.position.set(0,13.5,-15.3); g.add(rose2);
+  for(const [x,z] of [[-4,-6],[4,-6],[-4,4],[4,4],[0,11]]){ const l=new THREE.PointLight(0xffd9a0,1.2,22,2); l.position.set(x,7,z); g.add(l); const ch2=cyl(0.5,0.9,0.4,0xb8862a,8); ch2.position.set(x,6.5,z); g.add(ch2); const chain=cyl(0.02,0.02,h-6.7,0x8a8f9a,4); chain.position.set(x,h-(h-6.7)/2,z); g.add(chain); }
+  for(let i=0;i<6;i++){ const c=cyl(0.05,0.05,0.5,0xfff4d6,6); c.position.set(-2.5+i,1.45,11.4); g.add(c); const fl=sphere(0.07,0xffb347,5,4); fl.position.set(-2.5+i,1.76,11.4); g.add(fl); }
+  // choir loft over the entrance: a mezzanine with an organ, reached by stairs along the east wall
+  const loft=box(24,0.4,8,0xcfc8b8); loft.position.set(0,6,-11); g.add(loft); addStatic(o.x,6,o.z-11,12,0.2,4);
+  const rail=box(21.5,0.9,0.1,wood); rail.position.set(-1.25,6.65,-7); g.add(rail); addStatic(o.x-1.25,6.65,o.z-7,10.75,0.45,0.05);
+  const organ=box(5,3,1.2,wood); organ.position.set(0,7.7,-14.3); g.add(organ); addStatic(o.x,7.7,o.z-14.3,2.5,1.5,0.6); for(let i=0;i<9;i++){ const p=cyl(0.15,0.15,2+Math.abs(4-i)*0.4,0xb8862a,8); p.position.set(-2+i*0.5,9.9+Math.abs(4-i)*0.2,-14.3); g.add(p); }
+  for(let i=0;i<27;i++){ const top=0.22*(i+1); const z=5-i*0.45; const st=box(1.4,top,0.45,0xcfc8b8); st.position.set(10.9,top/2,z); g.add(st); addStatic(o.x+10.9,top/2,o.z+z,0.7,top/2,0.225); }
+  const ss=signPlane('CHOIR LOFT ↑',2,'#ffe66d','#3a2a1a'); ss.position.set(10.9,2.4,6.2); ss.rotation.y=Math.PI; g.add(ss);
+  const confess=box(2,2.6,1.4,wood); confess.position.set(-10.5,1.3,8); g.add(confess); addStatic(o.x-10.5,1.3,o.z+8,1,1.3,0.7); const cs=signPlane('CONFESSIONAL',1.8,'#ffe66d','#3a2a1a'); cs.position.set(-10.5,2.8,8.72); g.add(cs);
+  addNPC(o.x,o.z+10.6,Math.PI,'idle','priest',200,0.4);
+  for(const [x,z] of [[-4.2,-3],[4.2,-1],[-3,3],[5,5],[-5,7]]) addNPC(o.x+x,o.z+z-0.2,0,'idle','parishioner',201,-0.45);
+  const vs=signPlane('ST. ACORN\'S CATHEDRAL',8,'#ffe66d','#3a2a1a'); vs.position.set(0,3.4,-14.6); g.add(vs);
+  weddingInside(g,o);
+}
+function makeChurch(){
+  const CX=-60, CZ=61, W=24, D=30, H=20;
+  makeBuilding({x:CX,z:CZ,w:W,d:D,h:H,color:0xd8d2c4,floor:0xa89f90,roofColor:0x5b6b7a,door:'-z',interior:churchInterior,name:'cathedral',doorColor:0x6b0f1f,windowsFront:false,roomH:H});
+  // outside: buttresses, arched windows, a steep roof ridge, a cross
+  for(const x of [-W/2-0.6,W/2+0.6]) for(let z=-10;z<=10;z+=5){ const b=box(1.2,9,1.2,0xcfc8b8); b.position.set(CX+x,4.5,CZ+z); b.castShadow=true; scene.add(b); }
+  const ridge=new THREE.Mesh(new THREE.CylinderGeometry(0.01,13.5,7,4,1),mat(0x5b6b7a)); ridge.scale.set(1,1,D/W*1.0); ridge.rotation.y=Math.PI/4; ridge.position.set(CX,H+3.8,CZ); ridge.castShadow=true; scene.add(ridge);
+  const cross=box(0.4,3,0.4,0xb8862a); cross.position.set(CX,H+9,CZ); scene.add(cross); const crossArm=box(1.6,0.4,0.4,0xb8862a); crossArm.position.set(CX,H+9.6,CZ); scene.add(crossArm);
+  // bell towers at the front corners, with a rope you can climb to the belfry
+  for(const tx of [CX-W/2+1,CX+W/2-1]){
+    const TZ=CZ-D/2+2.5, TH=30;
+    for(const [ax,az] of [[1,0],[-1,0],[0,-1]]){ const w=box(ax?0.4:7,TH,az?0.4:7,0xcfc8b8); w.position.set(tx+ax*3.5,TH/2,TZ+az*3.5); scene.add(w); addStatic(tx+ax*3.5,TH/2,TZ+az*3.5,ax?0.2:3.5,TH/2,az?0.2:3.5); }
+    { const w=box(7,TH-20.6,0.4,0xcfc8b8); w.position.set(tx,20.6+(TH-20.6)/2,TZ+3.5); scene.add(w); addStatic(tx,20.6+(TH-20.6)/2,TZ+3.5,3.5,(TH-20.6)/2,0.2); }
+    const arch=signPlane('BELL TOWER',2.2,'#ffe66d','#3a2a1a'); arch.position.set(tx,3.2,TZ+3.3); scene.add(arch);
+    const belfry=box(7.4,0.4,7.4,0xcfc8b8); belfry.position.set(tx,TH-4,TZ); scene.add(belfry); addStatic(tx,TH-4,TZ,3.7,0.2,3.7);
+    for(const [ax,az] of [[1,0],[-1,0],[0,1],[0,-1]]){ for(const s of [-1,1]){ const pil=box(ax?0.6:2.2,4,az?0.6:2.2,0xcfc8b8); pil.position.set(tx+ax*3.4+(az?s*2.6:0),TH-2,TZ+az*3.4+(ax?s*2.6:0)); scene.add(pil); } }
+    const spire=new THREE.Mesh(new THREE.ConeGeometry(4.2,10,4),mat(0x5b6b7a)); spire.rotation.y=Math.PI/4; spire.position.set(tx,TH+5,TZ); spire.castShadow=true; scene.add(spire); addStatic(tx,TH+0.2,TZ,3.7,0.2,3.7);
+    const sc=box(0.25,1.6,0.25,0xb8862a); sc.position.set(tx,TH+10.6,TZ); scene.add(sc);
+    const rope=cyl(0.08,0.08,TH-4,0x8a6a3a,6); rope.position.set(tx,(TH-4)/2,TZ); scene.add(rope);
+    trees.push({x:tx,z:TZ,r:0.08,h:TH-4.2,platY:TH-3.8,platR:3,rope:true});
+    const bell=addBody('bell',new V3(0.7,0.8,0.7),10,tx,TZ,0,(()=>{ const gg=new THREE.Group(); const b=cyl(0.5,0.75,1.1,0xb8862a,14); gg.add(b); const lip=cyl(0.8,0.8,0.25,0xa67a22,14); lip.position.y=-0.6; gg.add(lip); const top=sphere(0.3,0xb8862a,8,6); top.position.y=0.6; gg.add(top); return gg; })(),{label:'church bell',y:TH-3.8,e:0.4});
+    const bs=signPlane('BELFRY',2,'#ffe66d','#3a2a1a'); bs.position.set(tx,TH+0.8,TZ-3.8); scene.add(bs);
+    const rs=signPlane('CLIMB THE ROPE',2.4,'#ffe66d','#3a2a1a'); rs.position.set(tx,2.6,TZ+3.9); scene.add(rs);
+  }
+  // apse at the back and a gilded sign
+  const apse=cyl(8,8,H-2,0xd8d2c4,16); apse.position.set(CX,(H-2)/2,CZ+D/2); scene.add(apse); addStatic(CX,(H-2)/2,CZ+D/2+2,6,(H-2)/2,4);
+  const apseRoof=new THREE.Mesh(new THREE.ConeGeometry(8.5,4,16),mat(0x5b6b7a)); apseRoof.position.set(CX,H,CZ+D/2); scene.add(apseRoof);
+  const sign=signPlane('ST. ACORN\'S CATHEDRAL',10,'#ffe66d','#3a2a1a'); sign.position.set(CX,H-2.5,CZ-D/2-0.3); sign.rotation.y=Math.PI; scene.add(sign);
+  const rose=roseWindow(3.2); rose.position.set(CX,H-7,CZ-D/2-0.25); rose.rotation.y=Math.PI; scene.add(rose);
+  footprint(CX-16,CX+16,CZ-D/2-1,CZ+D/2+6);
+}
+
+// ---------------- the Boshin War, south field ----------------
+const WAR={x:0,z:-115,soldiers:[],balls:[],cannons:[],shotT:0,smoke:[]};
+function makeSoldier(side,i){ const imperial=side>0; const g=makeHumanStyled(SKINS[i%5],imperial?0x1b1b1f:0x2f3f7a,imperial?0x3a3a40:0x1d2a5a,0x111111);
+  if(imperial){ const cap=cyl(0.2,0.22,0.12,0x1b1b1f,8); cap.position.y=0.9; g.add(cap); const band=box(0.42,0.05,0.42,0xb5162b); band.position.y=0.85; g.add(band); }
+  else { const hat=new THREE.Mesh(new THREE.ConeGeometry(0.42,0.22,10),mat(0xd9c7a8)); hat.position.y=0.92; g.add(hat); const armor=box(0.56,0.4,0.36,0x6b4a2e); armor.position.y=0.25; g.add(armor); }
+  const weapon=box(0.06,0.06,imperial?1.1:0.9,imperial?0x3a2a1a:0xdddddd); weapon.position.set(0.38,0.05,0.4); weapon.rotation.x=-0.3; g.add(weapon);
+  return g; }
+function makeWar(){
+  const field=new THREE.Mesh(new THREE.PlaneGeometry(90,30),new THREE.MeshLambertMaterial({color:0x7a6a4a})); field.rotation.x=-Math.PI/2; field.position.set(WAR.x,0.012,WAR.z); field.receiveShadow=true; scene.add(field);
+  for(let i=0;i<14;i++){ const crater=new THREE.Mesh(new THREE.CircleGeometry(1+rng()*1.5,12),new THREE.MeshLambertMaterial({color:0x4a3a2a})); crater.rotation.x=-Math.PI/2; crater.position.set(WAR.x-40+rng()*80,0.015,WAR.z-12+rng()*24); scene.add(crater); }
+  for(const side of [-1,1]){
+    const lineZ=WAR.z+side*11;
+    for(let i=0;i<8;i++){ const bag=box(1.6,0.7,0.7,0xb8a070); bag.position.set(WAR.x-28+i*8,0.35,lineZ+side*2); scene.add(bag); addStatic(WAR.x-28+i*8,0.35,lineZ+side*2,0.8,0.35,0.35); }
+    for(const fx of [-32,32]){ const pole=cyl(0.06,0.06,5,0x3a2a1a,5); pole.position.set(WAR.x+fx,2.5,lineZ+side*3); scene.add(pole); const flag=signPlane(side>0?'IMPERIAL ARMY':'SHOGUNATE',3,side>0?'#ffffff':'#ffe66d',side>0?'#b5162b':'#1d2a5a'); flag.position.set(WAR.x+fx+1.5,4.5,lineZ+side*3); scene.add(flag); }
+    for(const cx of [-20,20]){ const cz=lineZ+side*4; const wheelL=cyl(0.5,0.5,0.2,0x3a2a1a,10); wheelL.rotation.z=Math.PI/2; wheelL.position.set(WAR.x+cx-0.7,0.5,cz); scene.add(wheelL); const wheelR=wheelL.clone(); wheelR.position.x=WAR.x+cx+0.7; scene.add(wheelR); const barrel=cyl(0.18,0.25,2.2,0x222228,10); barrel.rotation.x=side>0?Math.PI/2+0.35:-Math.PI/2-0.35; barrel.position.set(WAR.x+cx,0.9,cz-side*0.6); scene.add(barrel); addStatic(WAR.x+cx,0.6,cz,0.9,0.6,0.9); const flash=new THREE.Mesh(new THREE.SphereGeometry(0.6,8,6),new THREE.MeshBasicMaterial({color:0xffb347,transparent:true,opacity:0})); flash.position.set(WAR.x+cx,1.3,cz-side*1.8); scene.add(flash); WAR.cannons.push({x:WAR.x+cx,z:cz-side*1.8,side,flash,t:rng()*6}); }
+    for(let i=0;i<10;i++){ const x=WAR.x-27+i*6, z=lineZ-side*(rng()*2); const n=addNPC(x,z,side>0?Math.PI:0,'war',side>0?'imperial soldier':'shogunate soldier',210+i,0,makeSoldier(side,i)); n.side=side; n.speed=2.2+rng()*0.8; WAR.soldiers.push(n); }
+  }
+  for(let i=0;i<6;i++) WAR.balls.push(addBody('cannonball',new V3(0.3,0.3,0.3),3,WAR.x-40+i*3,WAR.z+16,0,sphere(0.3,0x222228,10,8),{label:'cannonball',e:0.3,mu:0.3}));
+  for(let i=0;i<4;i++){ const col=new THREE.Group(); for(let k=0;k<5;k++){ const s=new THREE.Mesh(new THREE.SphereGeometry(0.8+k*0.35,8,6),new THREE.MeshLambertMaterial({color:0x6a6a70,transparent:true,opacity:0.45})); s.position.y=k*1.3; col.add(s); } col.position.set(WAR.x-30+i*20,1,WAR.z+(i%2?5:-5)); scene.add(col); WAR.smoke.push({g:col,ph:rng()*6}); }
+  const s=signPlane('BOSHIN WAR · 1868',9,'#ffffff','#3a2a1a'); s.position.set(WAR.x,5,WAR.z+16.5); s.rotation.y=Math.PI; scene.add(s); const post=cyl(0.1,0.1,5,0x3a2a1a,6); post.position.set(WAR.x,2.5,WAR.z+16.6); scene.add(post);
+  ZONES.push({name:'WAR CORRESPONDENT',pts:60,x:WAR.x,z:WAR.z,hx:45,hz:15,y0:-1,y1:6,cd:0});
+}
+function updateWar(dt,t){
+  for(const sm of WAR.smoke){ sm.g.children.forEach((s,k)=>{ s.position.y=((k*1.3+t*1.2+sm.ph)%7); s.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s.material.opacity=0.45*(1-s.position.y/7); }); }
+  if(!Net.isHost) return;
+  WAR.shotT+=dt;
+  if(WAR.shotT>3.5){ WAR.shotT=0; const near=WAR.soldiers.filter(n=>n.state==='war'&&Math.abs(n.body.pos.z-WAR.z)<5); if(near.length){ const v=near[Math.floor(rng()*near.length)]; ragdollNPC(v,new V3((rng()-0.5)*8,4,-v.side*6).multiplyScalar(v.body.mass),null); } }
+  for(const c of WAR.cannons){ c.t+=dt; c.flash.material.opacity=Math.max(0,c.flash.material.opacity-dt*3);
+    if(c.t>7+rng()*2){ c.t=0; const ball=WAR.balls.find(b=>b.asleep||b.pos.y<0.5)||WAR.balls[0]; ball.held=null; ball.wake(); ball.pos.set(c.x,1.3,c.z); const tx=WAR.x+(rng()-0.5)*50, tz=WAR.z-c.side*(4+rng()*8); const T=1.8; ball.vel.set((tx-ball.pos.x)/T,(0.5*G*T*T-1)/T,(tz-ball.pos.z)/T); ball.angVel.set(5,0,5); ball.lastHitBy=null; c.flash.material.opacity=1; c.flash.scale.setScalar(1+rng()); if(Math.hypot(player.pos.x-c.x,player.pos.z-c.z)<60) beep(60,0.5,'sawtooth',0.08); } }
+}
+
+// ---------------- Kendrick Lamar, north field ----------------
+const CONCERT={x:0,z:115};
+function makeConcert(){
+  const C=CONCERT; const lawn=new THREE.Mesh(new THREE.PlaneGeometry(90,30),new THREE.MeshLambertMaterial({color:0x5d9a44})); lawn.rotation.x=-Math.PI/2; lawn.position.set(C.x,0.011,C.z); scene.add(lawn);
+  const stage=box(26,1.4,10,0x222228); stage.position.set(C.x,0.7,C.z+8); scene.add(stage); addStatic(C.x,0.7,C.z+8,13,0.7,5); footprint(C.x-14,C.x+14,C.z+2,C.z+14);
+  const back=box(26,10,0.6,0x111); back.position.set(C.x,6.4,C.z+13); scene.add(back); addStatic(C.x,6.4,C.z+13,13,5,0.3);
+  const screen=signPlane('KENDRICK LAMAR',22,'#ffffff','#111111'); screen.position.set(C.x,8.2,C.z+12.6); screen.rotation.y=Math.PI; scene.add(screen);
+  whimsy.concertScreen=['KENDRICK LAMAR','WORLD TOUR','LIVE FROM SQUIRREL CITY','PUT YOUR PAWS UP','KENDRICK LAMAR'].map((q,i)=>{ const s=signPlane(q,22,i%2?'#ff2d95':'#ffffff','#111111'); s.position.set(C.x,8.2,C.z+12.6); s.rotation.y=Math.PI; s.visible=i===0; scene.add(s); return s; });
+  for(const x of [-13.5,13.5]){ const truss=box(0.6,14,0.6,0x3a3a40); truss.position.set(C.x+x,7,C.z+3.5); scene.add(truss); addStatic(C.x+x,7,C.z+3.5,0.3,7,0.3); }
+  const beam=box(28,0.5,0.5,0x3a3a40); beam.position.set(C.x,13.5,C.z+3.5); scene.add(beam);
+  const g=new THREE.Group(); scene.add(g);
+  const lights=partyLights(g,[[C.x-9,C.z+5],[C.x,C.z+5],[C.x+9,C.z+5]],[0xff2d95,0xffffff,0x2de2ff],12);
+  const strobe=new THREE.PointLight(0xffffff,0,40,2); strobe.position.set(C.x,13,C.z+6); g.add(strobe);
+  const beams=new THREE.Group(); beams.position.set(C.x,13.3,C.z+3.5);
+  for(let k=0;k<6;k++){ const cone=new THREE.Mesh(new THREE.ConeGeometry(1.4,14,12,1,true),new THREE.MeshBasicMaterial({color:[0xff2d95,0x2de2ff,0xffffff,0xb14cff,0xfff23d,0x3dff7a][k],transparent:true,opacity:0.14,blending:THREE.AdditiveBlending,depthWrite:false,side:THREE.DoubleSide})); cone.position.y=-7; cone.rotation.x=Math.PI; const piv=new THREE.Group(); piv.position.x=-10+k*4; piv.rotation.z=0.4*(k%2?1:-1); piv.add(cone); beams.add(piv); }
+  g.add(beams);
+  for(const x of [-11,-7,7,11]) addBody('speaker',new V3(0.45,0.8,0.45),5,C.x+x,C.z+5.5,0,makeSpeaker(),{label:'stage speaker',y:1.4});
+  for(let i=0;i<9;i++){ const bar=box(2.6,1,0.1,0x9aa3ad); bar.position.set(C.x-12+i*3,0.5,C.z+2); scene.add(bar); addStatic(C.x-12+i*3,0.5,C.z+2,1.3,0.5,0.05); }
+  const stand=cyl(0.04,0.04,1.4,0x3a3a40,6); stand.position.set(C.x,2.1,C.z+5); scene.add(stand); const mic=cyl(0.06,0.06,0.2,0x222,6); mic.position.set(C.x,2.85,C.z+5); scene.add(mic);
+  const k=makeHumanStyled(0x6b4a35,0x111111,0x2f3f7a,0x111111); const chain=new THREE.Mesh(new THREE.TorusGeometry(0.2,0.025,6,16),mat(0xffd23a)); chain.position.set(0,0.42,0.1); chain.rotation.x=Math.PI/2; k.add(chain); nameplate(k,'KENDRICK LAMAR','#ffffff','#111111');
+  const kn=addNPC(C.x,C.z+6,Math.PI,'dance','kendrick',230,1.4,k); kn.walkPhase=0;
+  for(const x of [-4,4]) addNPC(C.x+x,C.z+9,Math.PI,'dance','backup dancer',231,1.4);
+  for(let i=0;i<14;i++) addNPC(C.x-12+(i%7)*4+rng()*2,C.z-4+Math.floor(i/7)*4+rng()*2,0,'dance','fan',240+i,0);
+  const tent=box(5,3,4,0xd9342b); tent.position.set(C.x-24,1.5,C.z-6); scene.add(tent); addStatic(C.x-24,1.5,C.z-6,2.5,1.5,2); const ts=signPlane('MERCH',4,'#ffffff','#d9342b'); ts.position.set(C.x-24,2.6,C.z-3.9); scene.add(ts);
+  const fs=signPlane('SQUIRREL CITY AMPHITHEATER',12,'#ffffff','#1d3a2a'); fs.position.set(C.x,4.6,C.z-15); fs.rotation.y=Math.PI; scene.add(fs); const post=cyl(0.1,0.1,5,0x3a3a40,6); post.position.set(C.x,2.5,C.z-15.1); scene.add(post);
+  makeParty({name:'FRONT ROW',pts:60,x:C.x,z:C.z,hx:30,hz:15,y0:-1,y1:9,lights,strobe,beams,tiles:[],pal:[0xff2d95,0x2de2ff,0xffffff],style:'rap'});
+}
+
+// ---------------- Ricky & Sara's wedding (inside the cathedral) ----------------
+function weddingInside(g,o){
+  const groom=makeHumanStyled(0xd9a376,0x111111,0x111111,0x2a1d14); const bow=box(0.16,0.07,0.04,0xb5162b); bow.position.set(0,0.42,0.17); groom.add(bow); const lapel=box(0.2,0.5,0.02,0xffffff); lapel.position.set(0,0.2,0.16); groom.add(lapel); nameplate(groom,'RICKY','#ffffff','#111111');
+  const bride=makeHumanStyled(0xf1c9a5,0xffffff,0xffffff,0xd8c27a); const skirt=new THREE.Mesh(new THREE.ConeGeometry(0.55,1.0,12,1,true),new THREE.MeshToonMaterial({color:0xffffff,side:THREE.DoubleSide})); skirt.position.y=-0.45; bride.add(skirt); const veil=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.8,0.05),new THREE.MeshToonMaterial({color:0xffffff,transparent:true,opacity:0.5})); veil.position.set(0,0.55,-0.2); bride.add(veil); for(let i=0;i<5;i++){ const f=sphere(0.06,[0xff6a8a,0xffd23a,0xffffff][i%3],6,4); f.position.set(0.3+(i%2)*0.08,0.15+i*0.05,0.25); bride.add(f); } nameplate(bride,'SARA','#111111','#ffd9e6');
+  addNPC(o.x-0.9,o.z+9.6,0,'idle','groom',260,0.4,groom); addNPC(o.x+0.9,o.z+9.6,0,'idle','bride',261,0.4,bride);
+  const banner=signPlane('RICKY ♥ SARA',8,'#ffffff','#b5162b'); banner.position.set(0,9.5,14.4); g.add(banner);
+  for(const z of [-4,0,4,8]) for(const x of [-1.6,1.6]){ const st=cyl(0.12,0.12,1.2,0xffffff,6); st.position.set(x,0.6,z); g.add(st); for(let i=0;i<4;i++){ const f=sphere(0.16,[0xff6a8a,0xffffff,0xffd23a][i%3],6,4); f.position.set(x+(rng()-0.5)*0.3,1.3+rng()*0.2,z+(rng()-0.5)*0.3); g.add(f); } }
+  const runner=new THREE.Mesh(new THREE.PlaneGeometry(2.4,22),new THREE.MeshLambertMaterial({color:0xfff0f4})); runner.rotation.x=-Math.PI/2; runner.position.set(0,0.04,0); g.add(runner);
+  const table=box(1.6,0.9,1.0,0xffffff); table.position.set(-6,0.45,9.5); g.add(table); addStatic(o.x-6,0.45,o.z+9.5,0.8,0.45,0.5);
+  addBody('cake',new V3(0.4,0.45,0.4),3,o.x-6,o.z+9.5,0,(()=>{ const gg=new THREE.Group(); for(let i=0;i<3;i++){ const tier=cyl(0.42-i*0.12,0.42-i*0.12,0.28,0xfff4f8,14); tier.position.y=-0.3+i*0.3; gg.add(tier); const ice=cyl(0.44-i*0.12,0.44-i*0.12,0.05,0xff6a8a,14); ice.position.y=-0.17+i*0.3; gg.add(ice); } const top=sphere(0.08,0xffd23a,6,4); top.position.y=0.5; gg.add(top); return gg; })(),{label:'wedding cake',y:0.9});
+  ZONES.push({name:'WEDDING CRASHER',pts:100,x:o.x,z:o.z+9.5,hx:4,hz:2.5,y0:-1,y1:4,cd:0});
+}
+function weddingOutside(CX,CZ){
+  const car=addBody('car',new V3(2.1,0.8,0.95),12,CX+4,CZ,Math.PI/2,makeCar(0xffffff),{e:0.2,mu:0.5,label:'wedding car'});
+  const s=signPlane('JUST MARRIED',2.6,'#b5162b','#ffffff'); s.position.set(-2.15,0.1,0); s.rotation.y=-Math.PI/2; car.mesh.add(s);
+  for(let i=0;i<4;i++) addBody('can',new V3(0.17,0.16,0.17),0.4,CX+4-2.6-i*0.5,CZ+(i%2?0.4:-0.4),0,makeCan(),{label:'tin can'});
+}
+
+// ---------------- street breakdance cypher (park corner) ----------------
+function makeBreakdance(){
+  const BX=-10,BZ=-8;
+  const mat2=new THREE.Mesh(new THREE.PlaneGeometry(6,6),new THREE.MeshLambertMaterial({color:0xb08a5a})); mat2.rotation.x=-Math.PI/2; mat2.position.set(BX,0.02,BZ); scene.add(mat2); footprint(BX-4,BX+4,BZ-4,BZ+4);
+  addBody('boombox',new V3(0.4,0.25,0.18),2,BX+3.2,BZ-3.2,0.6,(()=>{ const gg=new THREE.Group(); gg.add(box(0.8,0.5,0.35,0x222228)); for(const x of [-0.25,0.25]){ const sp=cyl(0.15,0.15,0.04,0x8a8f9a,12); sp.rotation.x=Math.PI/2; sp.position.set(x,-0.02,0.18); gg.add(sp); } const h=box(0.5,0.05,0.05,0x8a8f9a); h.position.y=0.32; gg.add(h); return gg; })(),{label:'boombox'});
+  const styles=[0,1,2];
+  styles.forEach((st,i)=>{ const a=i/3*Math.PI*2; const n=addNPC(BX+Math.cos(a)*1.6,BZ+Math.sin(a)*1.6,-a+Math.PI/2,'breakdance','breakdancer',270+i,0,makeHumanStyled(SKINS[(i+2)%5],[0xff2d95,0x2de2ff,0xfff23d][i],0x111111,0x111111)); n.walkPhase=st*2+rng(); n.style=st; });
+  addNPC(BX+2.8,BZ+2.2,-2.3,'dance','hype man',275,0,makeHumanStyled(0x9c6b4a,0xffffff,0x2f3f7a,0x111111));
+  for(let i=0;i<4;i++) addNPC(BX-3.2+i*2.1,BZ+3.6,Math.PI,'idle','onlooker',276+i,0);
+  const s=signPlane('CYPHER · ALL STYLES WELCOME',6,'#111111','#fff23d'); s.position.set(BX,2.2,BZ-4.1); scene.add(s); const post=cyl(0.06,0.06,2.4,0x3a3a40,5); post.position.set(BX,1.2,BZ-4.15); scene.add(post);
+  ZONES.push({name:'CYPHER CRASHED',pts:40,x:BX,z:BZ,hx:3,hz:3,y0:-1,y1:3,cd:0});
+}
+function breakdancePose(b,t){ // override the mesh pose for a breakdancer: headspin, windmill, or footwork
+  const n=b.npc, st=n.style|0, ph=n.walkPhase||0; const m=b.mesh;
+  if(st===0){ tq.setFromAxisAngle(new V3(1,0,0),Math.PI); tq2.setFromAxisAngle(UP,t*9+ph); m.quaternion.copy(tq2).multiply(tq); m.position.y=b.pos.y+0.05; }
+  else if(st===1){ tq.setFromAxisAngle(new V3(1,0,0),-Math.PI/2+Math.sin(t*5+ph)*0.3); tq2.setFromAxisAngle(UP,t*6+ph); m.quaternion.copy(tq2).multiply(tq); m.position.y=b.pos.y-0.55; }
+  else { tq.setFromAxisAngle(new V3(0,0,1),Math.sin(t*4+ph)*0.5); tq2.setFromAxisAngle(UP,ph+Math.sin(t*2)*0.6); m.quaternion.copy(tq2).multiply(tq); m.position.y=b.pos.y-0.35+Math.abs(Math.sin(t*8+ph))*0.1; }
+}
+
+// ---------------- Pleasanton: town sign and the PTOWN ABODE ----------------
+function makePleasanton(){
+  for(const [x,z,ry] of [[-96,4.5,Math.PI/2],[88,-4.5,-Math.PI/2]]){
+    for(const dx of [-2.2,2.2]){ const post=box(0.3,3.2,0.3,0x6b4a2e); post.position.set(x,1.6,z+dx); scene.add(post); addStatic(x,1.6,z+dx,0.15,1.6,0.15); }
+    const s=signPlane('WELCOME TO PLEASANTON',6,'#ffe66d','#1d6b3a'); s.position.set(x,3.0,z); s.rotation.y=ry; scene.add(s);
+    const s2=signPlane('POP. 2 SQUIRRELS · DRIVE NICE',6,'#ffffff','#2a4a3a'); s2.position.set(x,1.9,z); s2.rotation.y=ry; scene.add(s2);
+    const back=box(0.1,2.6,6.2,0x6b4a2e); back.position.set(x-(ry>0?0.08:-0.08),2.45,z); scene.add(back);
+  }
+}
+function abodeInterior(g,o){
+  houseInterior(g,o);
+  const dining=box(1.8,0.8,1.0,0x8a5f3d); dining.position.set(0.5,0.4,2.2); g.add(dining); addStatic(o.x+0.5,0.4,o.z+2.2,0.9,0.4,0.5);
+  for(const [x,z] of [[-0.3,1.3],[1.3,1.3],[0.5,3.1]]) addBody('bowl',new V3(0.14,0.06,0.14),0.3,o.x+x,o.z+z-0.1,0,(()=>{ const gg=new THREE.Group(); const b=cyl(0.14,0.1,0.1,0xffffff,10); gg.add(b); const r=cyl(0.12,0.12,0.04,0xf6e7a8,10); r.position.y=0.06; gg.add(r); const st=box(0.02,0.25,0.02,0x6b4a2e); st.position.set(0.08,0.12,0); st.rotation.z=0.5; gg.add(st); return gg; })(),{label:'rice bowl',y:0.8});
+  const rack=box(1.2,0.5,0.35,0x8a5f3d); rack.position.set(2.5,0.25,-3.4); g.add(rack); for(let i=0;i<4;i++){ const sh=box(0.2,0.08,0.3,[0x111,0xd9342b,0xffffff,0xff6a8a][i]); sh.position.set(2.05+i*0.3,0.55,-3.4); g.add(sh); }
+  const fam=signPlane('PTOWN ABODE · EST. PLEASANTON',6,'#ffffff','#b5162b'); fam.position.set(0,3.2,3.8); fam.rotation.y=Math.PI; g.add(fam);
+  const mom=makeHumanStyled(0xf1c9a5,0xff6a8a,0x3a3a40,0x111111); nameplate(mom,'MOM','#ffffff','#ff6a8a');
+  const dad=makeHumanStyled(0xe8c39a,0x2f7de1,0x6a5a46,0x111111); const glasses=box(0.3,0.06,0.05,0x111); glasses.position.set(0,0.7,0.17); dad.add(glasses); nameplate(dad,'DAD','#ffffff','#2f7de1');
+  const kid=makeHumanStyled(0xf1c9a5,0xfff23d,0x2f3f7a,0x111111); kid.scale.setScalar(0.72); const bow=box(0.18,0.08,0.05,0xff2d95); bow.position.set(0.12,0.88,0); kid.add(bow); nameplate(kid,'DAUGHTER','#111111','#fff23d');
+  addNPC(o.x-0.3,o.z+1.1,Math.PI,'idle','mother',290,0,mom); addNPC(o.x+1.3,o.z+1.1,Math.PI,'idle','father',291,0,dad); addNPC(o.x+0.5,o.z+3.3,0,'idle','daughter',292,-0.25,kid);
+  ZONES.push({name:'TAKE YOUR SHOES OFF',pts:40,x:o.x,z:o.z,hx:5,hz:4,y0:-1,y1:4,cd:0});
+}
+makeBuilding({x:12,z:-52,w:10,d:8,h:5,color:0xf2d7a7,floor:0xb08a5a,roof:'pitched',roofColor:0x8a4b3a,door:'+z',sign:'PTOWN ABODE',signColor:'#ffffff',signBg:'#b5162b',signW:5,interior:abodeInterior,name:'PTOWN ABODE',doorColor:0xb5162b});
+makePleasanton();
+
+makeWar(); makeConcert(); makeBreakdance();
 
 // ---------------- squirrel mesh ----------------
 function makeSquirrel(fur){
@@ -889,24 +1071,34 @@ function animHuman(mesh,mode,speed,t){
   else if(mode===2){ const f=t*12; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i?Math.PI:0))*0.9); p.arms.forEach((a,i)=>{a.rotation.x=Math.PI+Math.sin(f+i)*0.4; a.rotation.z=(i?-1:1)*0.4;}); }
   else if(mode===3){ const bt=beatTime(); const f=bt*Math.PI; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i?Math.PI:0))*0.25); p.arms.forEach((a,i)=>{a.rotation.x=Math.PI-0.4+Math.sin(f*2+i*1.7)*0.5; a.rotation.z=(i?-1:1)*(0.5+Math.sin(f+i)*0.3);}); }
   else if(mode===4){ p.legs.forEach(l=>l.rotation.x=0); p.arms.forEach((a,i)=>{a.rotation.x=Math.sin(t*0.8+i)*0.05; a.rotation.z=0;}); }
-  else { const f=t*(mode===5?16:7)*Math.min(1,speed/1.3); const amp=Math.min(1,speed/1.3)*(mode===5?0.9:0.6); p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i%2?Math.PI:0)+(i>1?Math.PI:0))*amp); p.arms.forEach((a,i)=>{a.rotation.x=Math.sin(f+(i?0:Math.PI))*amp; a.rotation.z=0;}); }
+  else if(mode===8&&speed<0.3){ const f=t*9; p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i?Math.PI:0))*0.3); p.arms.forEach((a,i)=>{a.rotation.x=-(0.9+Math.max(0,Math.sin(f+i*Math.PI))*1.0); a.rotation.z=(i?-1:1)*0.25;}); }
+  else if(mode===9){ p.legs.forEach((l,i)=>l.rotation.x=Math.sin(t*10+(i?Math.PI:0))*1.1); p.arms.forEach((a,i)=>{a.rotation.x=-0.6; a.rotation.z=(i?-1:1)*1.3;}); }
+  else { const f=t*(mode===5||mode===8?15:7)*Math.min(1,speed/1.3); const amp=Math.min(1,speed/1.3)*(mode===5||mode===8?0.9:0.6); p.legs.forEach((l,i)=>l.rotation.x=Math.sin(f+(i%2?Math.PI:0)+(i>1?Math.PI:0))*amp); p.arms.forEach((a,i)=>{a.rotation.x=Math.sin(f+(i?0:Math.PI))*amp; a.rotation.z=0;}); }
 }
 
 // ---------------- audio (tiny) ----------------
 let ac=null;
 function ensureAudio(){ try{ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(e){} }
-const Music={gain:null,next:0,step:0,t0:0,noise:null,
+const Music={gain:null,next:0,step:0,t0:0,noise:null,style:'house',
   STEP:60/128/4,
   start(){ if(!ac||this.gain) return; this.gain=ac.createGain(); this.gain.gain.value=0; this.gain.connect(ac.destination); this.next=ac.currentTime+0.05; this.t0=this.next; this.step=0; const n=ac.createBuffer(1,ac.sampleRate,ac.sampleRate); const d=n.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; this.noise=n; },
   tick(vol){ if(!ac) return; if(!this.gain) this.start(); if(!this.gain) return; this.gain.gain.setTargetAtTime(vol,ac.currentTime,0.25); while(this.next<ac.currentTime+0.25){ if(vol>0.002) this.play(this.step,this.next); this.step=(this.step+1)%64; this.next+=this.STEP; } },
   env(node,t,a,peak,dec){ const g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec); node.connect(g).connect(this.gain); return g; },
   play(i,t){
+    if(this.style==='rap') return this.playRap(i,t);
     if(i%4===0){ const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(42,t+0.14); this.env(o,t,0.004,1.0,0.28); o.start(t); o.stop(t+0.32); }
     if(i%8===4){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1800; f.Q.value=0.8; n.connect(f); this.env(f,t,0.002,0.35,0.12); n.start(t); n.stop(t+0.16); }
     if(i%2===1){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; n.connect(f); this.env(f,t,0.001,i%4===3?0.14:0.08,0.05); n.start(t); n.stop(t+0.08); }
     const bassPat=[0,0,7,0,0,3,0,5,0,0,7,0,10,0,3,0]; if(i%2===0){ const semi=bassPat[(i/2)%16]; const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.value=55*Math.pow(2,semi/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.setValueAtTime(900,t); f.frequency.exponentialRampToValueAtTime(220,t+0.18); f.Q.value=6; o.connect(f); this.env(f,t,0.005,0.28,0.2); o.start(t); o.stop(t+0.24); }
     if(i%32===0||i%32===6||i%32===11||i%32===22){ const chord=(i%64<32)?[0,3,7,10]:[-2,2,5,9]; for(const semi of chord){ const o=ac.createOscillator(); o.type='square'; o.frequency.value=220*Math.pow(2,semi/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1800; o.connect(f); this.env(f,t,0.01,0.06,0.25); o.start(t); o.stop(t+0.3); } }
   }
+};
+Music.playRap=function(i,t){
+  const k=i%16; if(k===0||k===6||k===10||k===11){ const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(130,t); o.frequency.exponentialRampToValueAtTime(38,t+0.2); this.env(o,t,0.004,1.1,0.4); o.start(t); o.stop(t+0.45); }
+  if(k===4||k===12){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=2400; f.Q.value=0.7; n.connect(f); this.env(f,t,0.002,0.5,0.16); n.start(t); n.stop(t+0.2); }
+  if(i%2===0||k===7||k===15){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=8000; n.connect(f); this.env(f,t,0.001,k%4===2?0.12:0.07,0.04); n.start(t); n.stop(t+0.06); }
+  const bassPat=[0,-1,0,-1,3,-1,0,-1,-1,0,5,-1,3,-1,0,-1]; const semi=bassPat[k]; if(semi>=0&&i%2===0){ const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=41*Math.pow(2,semi/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260; o.connect(f); this.env(f,t,0.01,0.5,0.35); o.start(t); o.stop(t+0.4); }
+  if(k===2||k===9){ const o=ac.createOscillator(); o.type='square'; o.frequency.value=330*Math.pow(2,(k===2?0:3)/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1200; o.connect(f); this.env(f,t,0.01,0.05,0.18); o.start(t); o.stop(t+0.22); }
 };
 function beatTime(){ return (ac&&Music.gain)?(ac.currentTime-Music.t0)/(60/128):performance.now()/1000*128/60; }
 function beep(f,d,type,vol){ try{ ensureAudio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
@@ -961,7 +1153,7 @@ function headbutt(){
     const pt=new V3().copy(player.pos).addScaledVector(fwd,0.6); pt.y+=0.5;
     hitBody(b,imp,pt);
     any=true;
-    if(!b.npc){ const kt=kindTrick(b); trick(kt[0],kt[1]); }
+    if(!b.npc){ const kt=kindTrick(b); trick(kt[0],kt[1]); if(b.kind==='bell') beep(520,1.6,'sine',0.12); }
   }
   if(!any) beep(180,0.08,'triangle',0.03);
 }
@@ -1038,10 +1230,10 @@ function jump(){
 }
 
 const remoteNpcMode=new Array(bodies.length).fill(0);
-const ROLE_TRICKS={dj:['DJ DOWN',150],bouncer:['BOUNCER BOUNCED',120],dancer:['RAVER FLATTENED',100],fighter:['K.O.!',200],baller:['POSTERIZED',250],candidate:['DEBATE DISRUPTED',300],moderator:['MODERATOR DOWN',120],audience:['HECKLER HECKLED',80],pilot:['PILOT DOWN',150],'flight attendant':['UNRULY PASSENGER',120],passenger:['UNRULY PASSENGER',100],'frat bro':['FRAT BRO FLATTENED',100],professor:['OFFICE HOURS CANCELLED',150],student:['DROPPED OUT',100],engineer:['DEPLOYED ON A FRIDAY',150],alien:['CLOSE ENCOUNTER',150],'alien dj':['ZORP DOWN',250],abductee:['FARMER DALE DOWN',80],'office worker':['LAID OFF',100],resident:['HOME INVASION',150],shopkeeper:['SHOP LIFTED',100],mannequin:['MANNEQUIN MANGLED',40],vampire:['VAMPIRE SLAYER',300],'gate agent':['FLIGHT DELAYED',100],traveler:['LOST TRAVELER',80],cashier:['PRICE CHECK',100],receptionist:['NO APPOINTMENT',100]};
+const ROLE_TRICKS={dj:['DJ DOWN',150],bouncer:['BOUNCER BOUNCED',120],dancer:['RAVER FLATTENED',100],fighter:['K.O.!',200],baller:['POSTERIZED',250],candidate:['DEBATE DISRUPTED',300],moderator:['MODERATOR DOWN',120],audience:['HECKLER HECKLED',80],pilot:['PILOT DOWN',150],'flight attendant':['UNRULY PASSENGER',120],passenger:['UNRULY PASSENGER',100],'frat bro':['FRAT BRO FLATTENED',100],professor:['OFFICE HOURS CANCELLED',150],student:['DROPPED OUT',100],engineer:['DEPLOYED ON A FRIDAY',150],alien:['CLOSE ENCOUNTER',150],'alien dj':['ZORP DOWN',250],abductee:['FARMER DALE DOWN',80],'office worker':['LAID OFF',100],resident:['HOME INVASION',150],shopkeeper:['SHOP LIFTED',100],mannequin:['MANNEQUIN MANGLED',40],vampire:['VAMPIRE SLAYER',300],'gate agent':['FLIGHT DELAYED',100],traveler:['LOST TRAVELER',80],cashier:['PRICE CHECK',100],receptionist:['NO APPOINTMENT',100],priest:['EXCOMMUNICATED',200],parishioner:['MASS DISRUPTED',100],groom:['OBJECTION!',300],bride:['RUNAWAY BRIDE',300],'imperial soldier':['DISHONORED',120],'shogunate soldier':['DISHONORED',120],kendrick:['STAGE RUSHED',300],'backup dancer':['BACKUP DANCER DOWN',100],fan:['MOSH PIT',60],breakdancer:['BATTLE WON',150],'hype man':['HYPE OVER',80],onlooker:['BOWLED PEDESTRIAN',100],mother:['MOM IS DISAPPOINTED',150],father:['DAD JOKE INTERRUPTED',150],daughter:['SIBLING RIVALRY',100]};
 function npcTrick(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[0]; }
 function npcPts(role){ return (ROLE_TRICKS[role]||['BOWLED PEDESTRIAN',100])[1]; }
-const KIND_TRICKS={car:['CAR SMASH',75],speaker:['SOUND SYSTEM DOWN',60],can:['CLEANUP ON AISLE 3',10],cereal:['CLEANUP ON AISLE 3',10],duck:['DUCK PUNT',40],pump:['PUMP IT UP',50],podium:['PODIUM TOSS',80],ball:['BUZZER BEATER',20],keg:['KEG STAND',80],cup:['CUP CHAOS',5],laptop:['LAPTOP LAUNCHED',30],rack:['UNPLUGGED PROD',200],coffin:['GRAVE ROBBER',120],suitcase:['LOST LUGGAGE',30],cart:['CART CHAOS',25],vase:['VASE SMASHED',15],lamp:['LAMP DUNKED',15],bottle:['BAR FIGHT',10],chair:['CHAIR TOSS',15],plant:['PLANT PUNTED',15]};
+const KIND_TRICKS={car:['CAR SMASH',75],speaker:['SOUND SYSTEM DOWN',60],can:['CLEANUP ON AISLE 3',10],cereal:['CLEANUP ON AISLE 3',10],duck:['DUCK PUNT',40],pump:['PUMP IT UP',50],podium:['PODIUM TOSS',80],ball:['BUZZER BEATER',20],keg:['KEG STAND',80],cup:['CUP CHAOS',5],laptop:['LAPTOP LAUNCHED',30],rack:['UNPLUGGED PROD',200],coffin:['GRAVE ROBBER',120],suitcase:['LOST LUGGAGE',30],cart:['CART CHAOS',25],vase:['VASE SMASHED',15],lamp:['LAMP DUNKED',15],bottle:['BAR FIGHT',10],chair:['CHAIR TOSS',15],plant:['PLANT PUNTED',15],bell:['RING THE BELL',150],cannonball:['CANNONBALL RETURNED',100],cake:['CAKE SMASHED',150],boombox:['BOOMBOX BUMPED',40],bowl:['DINNER RUINED',40]};
 function kindTrick(b){ if(b.kind==='door'){ if(!b.broken){ b.broken=true; return ['BREAKING AND ENTERING',75]; } return ['DOOR SLAM',10]; } return KIND_TRICKS[b.kind]||['HEADBUTT',25]; }
 function ragdollNPC(n,imp,by){
   if(n.state==='rag') return;
@@ -1050,7 +1242,7 @@ function ragdollNPC(n,imp,by){
   b.vel.y+=3; b.angVel.set((rng()-0.5)*8,(rng()-0.5)*4,(rng()-0.5)*8);
   if(by==='me') trick(npcTrick(n.role),npcPts(n.role));
 }
-function npcMode(n){ return n.state==='rag'?1:n.state==='flee'?2:n.state==='dance'?3:n.state==='idle'?4:n.state==='hunt'?5:n.state==='fight'?6:n.state==='debate'?7:0; }
+function npcMode(n){ return n.state==='rag'?1:n.state==='flee'?2:n.state==='dance'?3:n.state==='idle'?4:n.state==='hunt'?5:n.state==='fight'?6:n.state==='debate'?7:n.state==='war'?8:n.state==='breakdance'?9:0; }
 function nearestPlayer(x,z){ let best=null,bd=1e9; const c=(px,py,pz)=>{ const d=Math.hypot(x-px,z-pz); if(d<bd){ bd=d; best={x:px,y:py,z:pz,d}; } }; c(player.pos.x,player.pos.y,player.pos.z); for(const r of Net.remotes.values()) if(r.st&&r.st.p) c(r.st.p[0],r.st.p[1],r.st.p[2]); return best; }
 function updateNPCs(dt){
   for(const n of npcs){
@@ -1064,9 +1256,15 @@ function updateNPCs(dt){
       }
       continue;
     }
-    if(n.state==='dance'||n.state==='idle'||n.state==='debate'){ b.vel.set(0,0,0); continue; }
+    if(n.state==='dance'||n.state==='idle'||n.state==='debate'||n.state==='breakdance'){ b.vel.set(0,0,0); continue; }
     let dx,dz,speed;
-    if(n.state==='fight'){
+    if(n.state==='war'){
+      let enemy=null,ed=1e9; for(const o of WAR.soldiers){ if(o.side===n.side||o.state!=='war') continue; const d=Math.hypot(o.body.pos.x-b.pos.x,o.body.pos.z-b.pos.z); if(d<ed){ ed=d; enemy=o; } }
+      if(enemy&&ed<1.6){ dx=enemy.body.pos.x-b.pos.x; dz=enemy.body.pos.z-b.pos.z; speed=0; }
+      else if(enemy){ dx=enemy.body.pos.x-b.pos.x; dz=enemy.body.pos.z-b.pos.z; speed=n.speed; if((b.pos.z-WAR.z)*n.side<2.5) speed=0; }
+      else { dx=n.home.x-b.pos.x; dz=n.home.z-b.pos.z; speed=Math.hypot(dx,dz)>1?n.speed:0; }
+      if(dx===0&&dz===0) continue;
+    } else if(n.state==='fight'){
       const f=n.foe.body; dx=f.pos.x-b.pos.x; dz=f.pos.z-b.pos.z; const fd=Math.hypot(dx,dz)||1;
       speed=fd>1.7?1.6:fd<1.2?-1.2:0; const sway=Math.sin(performance.now()/300+n.walkPhase)*0.6;
       b.pos.x+=(dx/fd*speed-dz/fd*sway)*dt; b.pos.z+=(dz/fd*speed+dx/fd*sway)*dt;
@@ -1101,7 +1299,7 @@ function updateNPCs(dt){
     const d=Math.hypot(dx,dz)||1; dx/=d; dz/=d;
     b.pos.x=clamp(b.pos.x+dx*speed*dt,-128,128); b.pos.z=clamp(b.pos.z+dz*speed*dt,-128,128); b.pos.y=(n.home.y||0)+b.half.y;
     b.vel.set(dx*speed,0,dz*speed);
-    if(speed>0){ tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt)); }
+    if(speed>0||n.state==='war'){ tq.setFromAxisAngle(UP,Math.atan2(dx,dz)); b.quat.slerp(tq,Math.min(1,10*dt)); }
     for(const s of statics){ if(b.pos.y>s.max.y+0.5||b.pos.y<s.min.y-1) continue; const cx=clamp(b.pos.x,s.min.x,s.max.x), cz=clamp(b.pos.z,s.min.z,s.max.z); const ex=b.pos.x-cx, ez=b.pos.z-cz, dd=Math.hypot(ex,ez); if(dd<0.5){ if(dd>1e-4){ b.pos.x+=ex/dd*(0.5-dd); b.pos.z+=ez/dd*(0.5-dd);} if(n.state!=='hunt') n.target=randomSidewalk(); } }
   }
 }
@@ -1157,7 +1355,7 @@ function collidePlayerTrees(move,dt){
     if(d<rr&&player.pos.y<t.h-0.2){
       const nx=dx/d, nz=dz/d;
       const toward=-(move.x*nx+move.z*nz);
-      if(toward>0.5&&move.lengthSq()>0.1){ player.climbing=t; player.climbAng=Math.atan2(dz,dx); player.vel.set(0,0,0); player.jumps=0; if(!t.scored){ t.scored=true; setTimeout(()=>t.scored=false,8000); trick('TREE CLIMB',10);} }
+      if(toward>0.5&&move.lengthSq()>0.1){ player.climbing=t; player.climbAng=Math.atan2(dz,dx); player.vel.set(0,0,0); player.jumps=0; player.pos.y=Math.max(player.pos.y,0.2); if(!t.scored){ t.scored=true; setTimeout(()=>t.scored=false,8000); trick(t.rope?'ROPE CLIMB':'TREE CLIMB',t.rope?30:10);} }
       else { player.pos.x+=nx*(rr-d); player.pos.z+=nz*(rr-d); const vn=player.vel.x*nx+player.vel.z*nz; if(vn<0){ player.vel.x-=nx*vn; player.vel.z-=nz*vn; } }
     }
   }
@@ -1358,7 +1556,7 @@ function wireConn(c,res){
   c.on('close',()=>{ Net.conns=Net.conns.filter(x=>x!==c); removeRemote(c.peer); Net.connected=Net.conns.length>0; setNetTxt(false,'Other player left'); if(!Net.isHost) becomeHost(); });
   c.on('error',()=>{ if(res) res(false); });
 }
-function becomeHost(){ if(Net.isHost) return; Net.isHost=true; Net.joinedAsGuest=false; for(const b of bodies){ b.pos.copy(b.tPos); b.quat.copy(b.tQuat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.wake(); if(b.npc){ const m=remoteNpcMode[b.idx]; b.kinematic=m!==1; b.npc.state=m===1?'rag':m===3?'dance':m===4?'idle':m===5?'hunt':m===6?'fight':m===7?'debate':(b.npc.home.state==='ball'?'ball':'walk'); } } centerMsg('You are now the host'); }
+function becomeHost(){ if(Net.isHost) return; Net.isHost=true; Net.joinedAsGuest=false; for(const b of bodies){ b.pos.copy(b.tPos); b.quat.copy(b.tQuat); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.wake(); if(b.npc){ const m=remoteNpcMode[b.idx]; b.kinematic=m!==1; b.npc.state=m===1?'rag':m===3?'dance':m===4?'idle':m===5?'hunt':m===6?'fight':m===7?'debate':m===8?'war':m===9?'breakdance':(b.npc.home.state==='ball'?'ball':'walk'); } } centerMsg('You are now the host'); }
 function leaveNet(){
   for(const u of Net.unsubs){ try{u();}catch(e){} } Net.unsubs=[];
   if(Net.named){ try{ Net.named.leave(); }catch(e){} Net.named=null; }
@@ -1473,10 +1671,10 @@ function updateDayNight(){
 }
 // ---------------- club light show + easter eggs ----------------
 function updateClub(dt,t){
-  let vol=0; const bt=beatTime(), beat=Math.floor(bt), frac=bt-beat, pulse=Math.pow(1-frac,3);
+  let vol=0, loud=null; const bt=beatTime(), beat=Math.floor(bt), frac=bt-beat, pulse=Math.pow(1-frac,3);
   for(const P of PARTIES){
     const d=Math.hypot(player.pos.x-P.x,player.pos.z-P.z,(player.pos.y-(P.y0+1))*0.5);
-    vol=Math.max(vol,P.inside?0.55:Math.max(0,0.55*(1-Math.max(0,d-13)/32)));
+    const pv=P.inside?0.55:Math.max(0,0.55*(1-Math.max(0,d-13)/32)); if(pv>vol){ vol=pv; loud=P; }
     if(d>80) continue;
     const pal=P.pal||CLUBPAL;
     for(const tl of P.tiles){ const k=(tl.i+tl.j+beat)%pal.length; tl.m.material.color.setHex(pal[k]); tl.m.material.color.multiplyScalar(0.55+0.45*pulse*((tl.i+tl.j+beat)%3===0?1:0.5)); }
@@ -1485,7 +1683,9 @@ function updateClub(dt,t){
     if(P.beams){ P.beams.rotation.y=t*0.9; P.beams.children.forEach((c,i)=>{ c.rotation.z=0.45+Math.sin(t*0.7+i)*0.25; }); }
     if(P.ball) P.ball.rotation.y=t*1.5;
   }
+  Music.style=(loud&&loud.style)||'house';
   if(ac) Music.tick(vol);
+  if(whimsy.concertScreen){ const q=Math.floor(t/4)%whimsy.concertScreen.length; whimsy.concertScreen.forEach((m,i)=>m.visible=i===q); }
   if(whimsy.alienCore){ whimsy.alienCore.scale.setScalar(1+pulse*0.4); }
   if(whimsy.leds) whimsy.leds.forEach((l,i)=>l.material.color.setHex((beat+i)%3===0?0xff3621:0x3dff7a));
   if(whimsy.quotes){ const q=Math.floor(t/3.5)%whimsy.quotes.length; whimsy.quotes.forEach((m,i)=>m.visible=i===q); }
@@ -1599,9 +1799,9 @@ function frame(now){
     for(const b of bodies){ if(b.held==='me') continue; tv.copy(b.pos); b.pos.lerp(b.tPos,Math.min(1,12*dt)); b.quat.slerp(b.tQuat,Math.min(1,12*dt)); b.vel.subVectors(b.pos,tv).divideScalar(Math.max(dt,0.001)); }
   }
   netTick(now,dt);
-  updateDayNight(); updatePlane(dt); updateClub(dt,t); updateWhimsy(dt,t);
+  updateDayNight(); updatePlane(dt); updateClub(dt,t); updateWhimsy(dt,t); updateWar(dt,t);
   // meshes
-  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=Net.isHost?npcMode(b.npc):remoteNpcMode[b.idx]; const sp=Net.isHost?b.vel.length():b.pos.distanceTo(b.tPos)*12; animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
+  for(const b of bodies){ b.mesh.position.copy(b.pos); b.mesh.quaternion.copy(b.quat); if(b.npc){ const mode=Net.isHost?npcMode(b.npc):remoteNpcMode[b.idx]; const sp=Net.isHost?b.vel.length():b.pos.distanceTo(b.tPos)*12; animHuman(b.mesh,mode,sp,t+b.npc.walkPhase); if(mode===9) breakdancePose(b,t); if(mode===3){ const bt=beatTime(); b.mesh.position.y+=Math.abs(Math.sin(bt*Math.PI+b.npc.walkPhase))*0.18; } } }
   for(const a of acorns){ if(!a.taken){ a.mesh.position.y=0.35+Math.sin(t*2+a.phase)*0.06; a.mesh.rotation.y=t+a.phase; } }
   // my squirrel
   const m=player.mesh, h=m.holder; h.position.copy(player.pos); h.position.y+=player.driving?1.45:0.4;
@@ -1614,7 +1814,7 @@ function frame(now){
   hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
   if(!window.__sq||!window.__sq.skipRender) renderer.render(scene,camera);
 }
-window.__sq={player,bodies,npcs,trees,headbutt,tailGrab,enterRagdoll,Net,cam,whimsy,CLUB,statics,frame,packState,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,enterCar,exitCar,tryFly};
+window.__sq={player,bodies,npcs,trees,headbutt,tailGrab,enterRagdoll,Net,cam,whimsy,CLUB,statics,frame,packState,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,enterCar,exitCar,tryFly,WAR,CONCERT};
 requestAnimationFrame(frame);
 detectNet();
 })();
