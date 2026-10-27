@@ -214,7 +214,7 @@ const _lwp=new V3();
 function updateLightPool(center){
   for(const v of VLIGHTS){ v.getWorldPosition(_lwp); v._d=_lwp.distanceTo(center); v._wx=_lwp.x; v._wy=_lwp.y; v._wz=_lwp.z; }
   VLIGHTS.sort((a,b)=>a._d-b._d);
-  for(let i=0;i<LPOOL.length;i++){ const pl=LPOOL[i], v=VLIGHTS[i]; if(!v||v._d>70||v.intensity<=0){ pl.intensity=0; continue; } pl.position.set(v._wx,v._wy,v._wz); pl.color.copy(v.color); pl.distance=v.distance; pl.decay=v.decay; pl.intensity=v.intensity*clamp(1-(v._d-45)/25,0,1); }
+  for(let i=0;i<LPOOL.length;i++){ const pl=LPOOL[i], v=VLIGHTS[i]; if(!v||v._d>70||v.intensity<=0){ pl.intensity=0; continue; } pl.position.set(v._wx,v._wy,v._wz); pl.color.copy(v.color); pl.distance=v.distance; pl.decay=v.decay; pl.intensity=Math.min(v.intensity,v._d<16?20:3)*clamp(1-(v._d-45)/25,0,1); }
 }
 const matCache=new Map();
 function mat(c){ if(!matCache.has(c)) matCache.set(c,new THREE.MeshToonMaterial({color:c})); return matCache.get(c); }
@@ -1984,14 +1984,14 @@ const SHOTS=[
   {t0:12.5,t1:16.5,cam:[V(20,2.2,-9.5),V(20,2.6,-16)],look:[V(20,1.6,-22),V(20,2.4,-27)],fov:58,tod:0.85,card:{at:0.3,text:'THE RAVE'},stage:'club'},
   {t0:16.5,t1:20.5,cam:[V(-40,2.5,-100),V(30,3.5,-104)],look:[V(0,1.5,-115),V(10,1.5,-115)],fov:55,tod:0.62,card:{at:0.3,text:'THE WAR'},stage:'war'},
   {t0:20.5,t1:24.5,cam:[V(-12,1.6,98),V(6,5,108)],look:[V(0,4,123),V(0,5,123)],fov:60,tod:0.8,card:{at:0.3,text:'THE SHOW'},stage:'concert'},
-  {t0:24.5,t1:27.5,cam:[V(52,2,8),V(60,3,12)],look:[V(60,1,22),V(60,2,20)],fov:48,tod:0.35,card:{at:0.3,text:'THE DUNK'}},
+  {t0:24.5,t1:27.5,cam:[V(66.5,2.2,33),V(65,2.9,11)],look:[V(60,1,22),V(60,2,20)],track:'lebron',stage:'dunk',fov:48,tod:0.35,card:{at:0.3,text:'THE DUNK'}},
   {t0:27.5,t1:31.5,cam:[V(-60,3.5,47),V(-60,2,64)],look:[V(-60,3,70),V(-60,1.6,71)],fov:52,tod:0.3,card:{at:0.5,text:'THE WEDDING',sub:'ricky is very attractive'}},
   {t0:31.5,t1:34.5,fov:44,tod:0.4,fixed:{x:0,y:1.3,z:0},stage:'punch',card:{at:0.9,text:'THE CONSEQUENCES'}},
-  {t0:34.5,t1:38.5,cam:[V(-14,2,-28),V(-30,16,-8)],look:[V(-20,10,-20),V(-20,18,-20)],fov:58,tod:0.9,stage:'ufo',card:{at:0.3,text:'THE MOTHERSHIP'}},
-  {t0:38.5,t1:43.5,cam:[V(100,3,40),V(90,22,-40)],look:[V(112,2,20),V(112,12,-80)],fov:60,tod:0.08,stage:'flight',card:{at:0.4,text:'THE FLIGHT'}},
-  {t0:43.5,t1:45.5,cam:[V(104,2.5,2),V(100,3,-2)],look:[V(103,8,-10),V(103,10,-8)],fov:50,tod:0.3,card:{at:0.2,text:'THE BURGER'}},
-  {t0:45.5,t1:47.5,cam:[V(-100,2,-36),V(-108,2.5,-44)],look:[V(-112,1.6,-52),V(-112,1.4,-52)],fov:48,tod:0.88,card:{at:0.2,text:'THE BUCKET',sub:'nothing good is in there'}},
-  {t0:47.5,t1:48.7,cam:[V(-6,1.3,-4),V(-7,1.6,-5)],look:[V(-10,0.8,-8),V(-10,0.8,-8)],fov:50,tod:0.3},
+  {t0:34.5,t1:38.5,cam:[V(24,10,24),V(19,14,22)],look:[V(0,11,0),V(0,13,0)],track:'ufo',fov:58,tod:0.9,stage:'ufo',card:{at:0.3,text:'THE MOTHERSHIP'}},
+  {t0:38.5,t1:43.5,cam:[V(16,3,22),V(24,9,30)],look:[V(0,2,-4),V(0,2,-4)],track:'plane',fov:60,tod:0.08,stage:'flight',card:{at:0.4,text:'THE FLIGHT'}},
+  {t0:43.5,t1:45.5,cam:[V(83,3.6,11),V(86,3.9,8)],look:[V(92,3,-10),V(93,4,-10)],fov:58,tod:0.3,card:{at:0.2,text:'THE BURGER'}},
+  {t0:45.5,t1:47.5,cam:[V(-95,2.4,-35),V(-105,2.6,-45)],look:[V(-112,1.6,-52),V(-112,1.4,-52)],fov:48,tod:0.88,card:{at:0.2,text:'THE BUCKET',sub:'nothing good is in there'}},
+  {t0:47.5,t1:48.7,cam:[V(-3,1.6,-1),V(-4,1.8,-2)],look:[V(-10,1,-8),V(-10,1,-8)],fov:50,tod:0.3},
   {t0:48.7,t1:49.9,cam:[V(-33,1.4,-6),V(-32,1.6,-7)],look:[V(-30,1.4,-10),V(-30,1.6,-10)],fov:46,tod:0.3},
   {t0:49.9,t1:51.1,cam:[V(-116,2,20),V(-114,2.4,18)],look:[V(-110,0.6,30),V(-110,0.6,30)],fov:50,tod:0.55},
   {t0:51.1,t1:52.3,cam:[V(60,1.8,-42),V(58,2.2,-44)],look:[V(60,1.4,-50),V(60,1.4,-50)],fov:46,tod:0.35},
@@ -2001,14 +2001,15 @@ const SHOTS=[
 function trailerStage(name){
   const P=players[localSlot];
   const place=(x,z,yaw)=>{ if(P.driving) exitCar(); P.rag=null; P.climbing=null; P.held=null; P.pos.set(x,0,z); P.pPos.copy(P.pos); P.vel.set(0,0,0); P.yaw=yaw; TRAILER.yaw=yaw; };
-  if(name==='park'){ place(-22,-6,Math.PI*0.75); }
-  if(name==='car'){ const car=bodies.find(b=>b.kind==='car'&&!b.driver); place(car.pos.x,car.pos.z+6,Math.PI); car.wake(); }
+  if(name==='park'){ place(-46,0.4,Math.PI/2); }
+  if(name==='car'){ const cars=bodies.filter(b=>b.kind==='car'&&!b.driver); const car=cars[2]||cars[0]; place(car.pos.x,car.pos.z+5.2,Math.PI); car.wake(); }
   if(name==='club'){ place(20,-11,Math.PI); }
+  if(name==='dunk'){ const n=whimsy.lebron, b=whimsy.ball; if(n&&b){ n.body.pos.set(whimsy.court.x,0.9,whimsy.court.z-4); n.body.vel.set(0,0,0); n.target={x:whimsy.court.x,z:whimsy.court.z+6}; n.hasBall=false; n.dribbleT=0; n.cool=0; n.state='ball'; b.held=null; b.pos.set(whimsy.court.x+0.8,0.3,whimsy.court.z-2); b.vel.set(0,0,0); b.angVel.set(0,0,0); b.wake(); } }
   if(name==='war'){ for(const c of WAR.cannons) c.t=6.5+(c.x>WAR.x?1.5:0); }
   if(name==='concert'){ place(0,100,0); }
   if(name==='punch'){ const s=whimsy.saitama; const v=npcs.find(n=>n.state==='walk'&&n.role!=='saitama'&&n.role!=='timmy'&&n.role!=='wah'&&n.role!=='hudson'); if(s&&v){ v.body.pos.set(s.body.pos.x+1.3,0.9,s.body.pos.z); v.target={x:s.body.pos.x,z:s.body.pos.z}; v.speed=0; s.punchT=4.6; TRAILER.fixedAt={x:s.body.pos.x,z:s.body.pos.z}; } place(-11,-30,0); }
   if(name==='ufo'){ const u=whimsy.ufo.position; place(u.x,u.z,0); P.cd.abduct=0; }
-  if(name==='flight'){ place(112,20,0); P.pos.set(112-0.5,2.1,20-10); P.pPos.copy(P.pos); PLANE.flightTick=Math.max(1,simTick)-150; }
+  if(name==='flight'){ place(112,20,0); P.pos.set(112-0.5,2.1,20-10); P.pPos.copy(P.pos); PLANE.flightTick=Math.max(1,simTick)-360; }
 }
 function startTrailer(record){
   if(Net.mode!=='solo') leaveNet();
@@ -2038,11 +2039,13 @@ function updateTrailer(dt){
   if(S.fire&&!TRAILER.fired&&local>=S.fire.at){ TRAILER.fired=true; TRAILER.input=Object.assign({},TRAILER.input,{f:true}); TRAILER.fireTick=simTick; }
   else if(TRAILER.fired&&TRAILER.input&&TRAILER.input.f&&simTick>TRAILER.fireTick+1){ TRAILER.input=Object.assign({},TRAILER.input,{f:false}); }
   // camera
-  const P=players[localSlot]; const pv=viewPos(P);
+  const P=players[localSlot]; if(S.stage==='ufo'&&!P.rag){ P.pos.x=whimsy.ufo.position.x; P.pos.z=whimsy.ufo.position.z; P.vel.x=0; P.vel.z=0; }
+  const pv=viewPos(P);
   let cp, lk;
   if(S.follow){ const y=TRAILER.yaw||0; const bx=-Math.sin(y)*S.follow.back+Math.cos(y)*S.follow.side, bz=-Math.cos(y)*S.follow.back-Math.sin(y)*S.follow.side; cp=V(pv.x+bx,pv.y+S.follow.up,pv.z+bz); lk=V(pv.x,pv.y+0.7,pv.z); }
   else if(S.fixed){ const a=TRAILER.fixedAt||{x:pv.x,z:pv.z}; const ang=local*0.5; cp=V(a.x+Math.cos(ang)*4.5,1.6,a.z+Math.sin(ang)*4.5); lk=V(a.x,1.0,a.z); }
-  else { cp=V(0,0,0).lerpVectors(S.cam[0],S.cam[1],u); lk=V(0,0,0).lerpVectors(S.look[0],S.look[1],u); }
+  else if(S.track==='plane'){ const o=V(0,0,0).lerpVectors(S.cam[0],S.cam[1],u), l=V(0,0,0).lerpVectors(S.look[0],S.look[1],u); const y=PLANE.yaw, c=Math.cos(y), sn=Math.sin(y); cp=V(PLANE.x+o.x*c+o.z*sn,PLANE.y+o.y,PLANE.z-o.x*sn+o.z*c); lk=V(PLANE.x+l.x*c+l.z*sn,PLANE.y+l.y,PLANE.z-l.x*sn+l.z*c); }
+  else { cp=V(0,0,0).lerpVectors(S.cam[0],S.cam[1],u); lk=V(0,0,0).lerpVectors(S.look[0],S.look[1],u); if(S.track==='lebron'&&whimsy.lebron){ const b=whimsy.lebron.body.pos; lk=V(b.x,b.y+0.5,b.z); } if(S.track==='ufo'&&whimsy.ufo){ const q=whimsy.ufo.position; cp=V(q.x+cp.x,cp.y,q.z+cp.z); lk=V(q.x,lk.y,q.z); } }
   TRAILER.cp=cp; TRAILER.lk=lk; TRAILER.fov=S.fov||55;
   // cuts dip to black for a few frames; the opener and the title card fade slowly
   const inD=si===0?2.0:0.18, outD=si===SHOTS.length-1?1.6:0.18; const tin=Math.min(1,local/inD), tout=Math.min(1,(S.t1-t)/outD); TRAILER.fade=1-Math.min(tin,tout);
