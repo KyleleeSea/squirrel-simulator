@@ -155,11 +155,6 @@ h1 span{color:var(--leaf)}
           <input type="text" id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Game code to join">
           <button type="button" id="joinBtn" class="ghost">Join with code</button>
         </div>
-        <div class="row">
-          <button type="button" id="trailerBtn" class="ghost">Watch the trailer</button>
-          <button type="button" id="recordBtn" class="ghost">Record the trailer</button>
-        </div>
-        <a id="trailerDl" class="dl" hidden>Download the trailer</a>
         <div class="games" id="games"></div>
         <div class="status" id="status"></div>
       </div>
@@ -2063,7 +2058,7 @@ function startRecording(){
     if(ac){ recDest=ac.createMediaStreamDestination(); audioOut().connect(recDest); if(Music.gain){ try{ Music.gain.disconnect(); }catch(e){} Music.gain.connect(audioOut()); } stream.addTrack(recDest.stream.getAudioTracks()[0]); }
     const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
     const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:9e6}:undefined); TRAILER.chunks=[]; rec.ondataavailable=e=>{ if(e.data&&e.data.size) TRAILER.chunks.push(e.data); };
-    rec.onstop=()=>{ const blob=new Blob(TRAILER.chunks,{type:'video/webm'}); TRAILER.blob=blob; const url=URL.createObjectURL(blob); const a=$('trailerDl'); a.href=url; a.download='squirrel-game-trailer.webm'; a.hidden=false; a.textContent='Download the trailer ('+(blob.size/1048576).toFixed(1)+' MB)'; showMenu(true); if(TRAILER.onBlob) TRAILER.onBlob(blob); };
+    rec.onstop=()=>{ const blob=new Blob(TRAILER.chunks,{type:'video/webm'}); TRAILER.blob=blob; const url=URL.createObjectURL(blob); const a=$('trailerDl'); if(!a) return; a.href=url; a.download='squirrel-game-trailer.webm'; a.hidden=false; a.textContent='Download the trailer ('+(blob.size/1048576).toFixed(1)+' MB)'; showMenu(true); if(TRAILER.onBlob) TRAILER.onBlob(blob); };
     rec.start(500); TRAILER.recorder=rec; TRAILER.stream=stream;
   }catch(e){ TRAILER.recorder=null; console.warn('recording unavailable',e); }
 }
@@ -2122,9 +2117,6 @@ window.addEventListener('mousemove',e=>{
 canvas.addEventListener('wheel',e=>{ e.preventDefault(); cam.dist=clamp(cam.dist+Math.sign(e.deltaY)*0.6,3,13); },{passive:false});
 document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement===canvas) dragging=false; });
 $('menuBtn').addEventListener('click',()=>showMenu(true));
-$('trailerBtn').addEventListener('click',()=>{ readName(); startTrailer(false); });
-if(window.claude||!window.MediaRecorder) $('recordBtn').hidden=true; // recording only where a download can be saved
-$('recordBtn').addEventListener('click',()=>{ readName(); startTrailer(true); });
 
 // menu wiring
 const sw=$('swatches');
