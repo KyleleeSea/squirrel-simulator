@@ -96,6 +96,17 @@ h1 span{color:var(--leaf)}
   .bottomright{grid-column:2}
   .hud .menubtn{grid-column:2;grid-row:1}
 }
+/* trailer */
+#cine{position:absolute;inset:0;pointer-events:none}
+#cine .bar{position:absolute;left:0;right:0;height:11%;background:#000}
+#cine .bar.top{top:0} #cine .bar.bottom{bottom:0}
+#cineFade{position:absolute;inset:0;background:#000;opacity:1}
+#cineCard{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;padding-inline:max(16px,env(safe-area-inset-left,0px));opacity:0;transition:none}
+#cineText{font-family:var(--display);font-size:clamp(28px,6vw,72px);letter-spacing:.08em;color:#fff;text-shadow:0 4px 0 #000,0 0 40px rgba(0,0,0,.8);text-wrap:balance}
+#cineSub{font-family:var(--body);font-weight:700;font-size:clamp(14px,2vw,22px);letter-spacing:.2em;text-transform:uppercase;color:var(--accent);margin-top:12px;text-shadow:0 2px 0 #000}
+#cineCard.big #cineText{font-size:clamp(44px,11vw,140px);color:var(--accent);letter-spacing:.04em}
+#cineCard.big #cineSub{color:#fff;letter-spacing:.14em;text-transform:none}
+.dl{display:block;text-align:center;color:var(--leaf);font-weight:800;text-decoration:underline}
 @media (prefers-reduced-motion:reduce){.toast{animation:none}}
 </style>
 
@@ -118,6 +129,8 @@ h1 span{color:var(--leaf)}
       <div class="net" id="netTxt"><i></i>Solo</div>
     </div>
   </div>
+
+  <div id="cine" hidden><div class="bar top"></div><div class="bar bottom"></div><div id="cineFade"></div><div id="cineCard" hidden><div id="cineText"></div><div id="cineSub"></div></div></div>
 
   <div class="menu" id="menu">
     <div class="card">
@@ -142,6 +155,11 @@ h1 span{color:var(--leaf)}
           <input type="text" id="codeIn" maxlength="4" placeholder="CODE" autocomplete="off" spellcheck="false" aria-label="Game code to join">
           <button type="button" id="joinBtn" class="ghost">Join with code</button>
         </div>
+        <div class="row">
+          <button type="button" id="trailerBtn" class="ghost">Watch the trailer</button>
+          <button type="button" id="recordBtn" class="ghost">Record the trailer</button>
+        </div>
+        <a id="trailerDl" class="dl" hidden>Download the trailer</a>
         <div class="games" id="games"></div>
         <div class="status" id="status"></div>
       </div>
@@ -1246,11 +1264,12 @@ let ac=null;
 function ensureAudio(){ try{ if(!ac) ac=new (window.AudioContext||window.webkitAudioContext)(); if(ac.state==='suspended') ac.resume(); }catch(e){} }
 const Music={gain:null,next:0,step:0,t0:0,noise:null,style:'house',
   STEP:60/128/4,
-  start(){ if(!ac||this.gain) return; this.gain=ac.createGain(); this.gain.gain.value=0; this.gain.connect(ac.destination); this.next=ac.currentTime+0.05; this.t0=this.next; this.step=0; const n=ac.createBuffer(1,ac.sampleRate,ac.sampleRate); const d=n.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; this.noise=n; },
+  start(){ if(!ac||this.gain) return; this.gain=ac.createGain(); this.gain.gain.value=0; this.gain.connect(audioOut()||ac.destination); this.next=ac.currentTime+0.05; this.t0=this.next; this.step=0; const n=ac.createBuffer(1,ac.sampleRate,ac.sampleRate); const d=n.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; this.noise=n; },
   tick(vol){ if(!ac) return; if(!this.gain) this.start(); if(!this.gain) return; this.gain.gain.setTargetAtTime(vol,ac.currentTime,0.25); while(this.next<ac.currentTime+0.25){ if(vol>0.002) this.play(this.step,this.next); this.step=(this.step+1)%64; this.next+=this.STEP; } },
   env(node,t,a,peak,dec){ const g=ac.createGain(); g.gain.setValueAtTime(0.0001,t); g.gain.linearRampToValueAtTime(peak,t+a); g.gain.exponentialRampToValueAtTime(0.0001,t+a+dec); node.connect(g).connect(this.gain); return g; },
   play(i,t){
     if(this.style==='rap') return this.playRap(i,t);
+    if(this.style==='epic') return this.playEpic(i,t);
     if(i%4===0){ const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(160,t); o.frequency.exponentialRampToValueAtTime(42,t+0.14); this.env(o,t,0.004,1.0,0.28); o.start(t); o.stop(t+0.32); }
     if(i%8===4){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1800; f.Q.value=0.8; n.connect(f); this.env(f,t,0.002,0.35,0.12); n.start(t); n.stop(t+0.16); }
     if(i%2===1){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=7000; n.connect(f); this.env(f,t,0.001,i%4===3?0.14:0.08,0.05); n.start(t); n.stop(t+0.08); }
@@ -1265,8 +1284,17 @@ Music.playRap=function(i,t){
   const bassPat=[0,-1,0,-1,3,-1,0,-1,-1,0,5,-1,3,-1,0,-1]; const semi=bassPat[k]; if(semi>=0&&i%2===0){ const o=ac.createOscillator(); o.type='triangle'; o.frequency.value=41*Math.pow(2,semi/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=260; o.connect(f); this.env(f,t,0.01,0.5,0.35); o.start(t); o.stop(t+0.4); }
   if(k===2||k===9){ const o=ac.createOscillator(); o.type='square'; o.frequency.value=330*Math.pow(2,(k===2?0:3)/12); const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1200; o.connect(f); this.env(f,t,0.01,0.05,0.18); o.start(t); o.stop(t+0.22); }
 };
+Music.playEpic=function(i,t){
+  const k=i%32;
+  if(k===0||k===16){ const o=ac.createOscillator(); o.type='sine'; o.frequency.setValueAtTime(120,t); o.frequency.exponentialRampToValueAtTime(30,t+0.3); this.env(o,t,0.005,1.3,0.55); o.start(t); o.stop(t+0.6); }
+  if(k===8||k===24){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='bandpass'; f.frequency.value=1400; f.Q.value=0.6; n.connect(f); this.env(f,t,0.002,0.55,0.32); n.start(t); n.stop(t+0.36); }
+  if(i%4===2){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.value=9000; n.connect(f); this.env(f,t,0.001,0.05,0.05); n.start(t); n.stop(t+0.06); }
+  if(k===0){ const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.value=55; const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=280; o.connect(f); this.env(f,t,0.3,0.38,3.4); o.start(t); o.stop(t+3.8); }
+  if(k===0||k===12||k===20){ for(const hz of [110,164.81,220,277.18]){ const o=ac.createOscillator(); o.type='sawtooth'; o.frequency.value=hz; o.detune.value=(hz%3)*6-6; const f=ac.createBiquadFilter(); f.type='lowpass'; f.frequency.value=1000; o.connect(f); this.env(f,t,0.02,0.09,0.85); o.start(t); o.stop(t+0.9); } }
+  if(k===26){ const n=ac.createBufferSource(); n.buffer=this.noise; const f=ac.createBiquadFilter(); f.type='highpass'; f.frequency.setValueAtTime(400,t); f.frequency.exponentialRampToValueAtTime(8000,t+0.7); n.connect(f); this.env(f,t,0.3,0.2,0.4); n.start(t); n.stop(t+0.72); }
+};
 function beatTime(){ return (ac&&Music.gain)?(ac.currentTime-Music.t0)/(60/128):performance.now()/1000*128/60; }
-function beep(f,d,type,vol){ if(!isLocal()) return; try{ ensureAudio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
+function beep(f,d,type,vol){ if(!isLocal()) return; try{ ensureAudio(); if(!ac) return; const o=ac.createOscillator(), g=ac.createGain(); o.type=type||'square'; o.frequency.setValueAtTime(f,ac.currentTime); o.frequency.exponentialRampToValueAtTime(f*1.6,ac.currentTime+d); g.gain.setValueAtTime(vol||0.05,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+d); o.connect(g).connect(audioOut()||ac.destination); o.start(); o.stop(ac.currentTime+d); }catch(e){} }
 
 // ---------------- player ----------------
 // Every squirrel is simulated identically on every machine (lockstep). The gameplay code below is written against
@@ -1647,6 +1675,7 @@ function camOcclude(from,to){
   return best;
 }
 function updateCamera(dt){
+  if(TRAILER.active&&TRAILER.cp){ camera.position.copy(TRAILER.cp); camera.lookAt(TRAILER.lk); cam.pos.copy(camera.position); if(Math.abs(camera.fov-TRAILER.fov)>0.05){ camera.fov+=(TRAILER.fov-camera.fov)*Math.min(1,4*dt); camera.updateProjectionMatrix(); } const el=Math.max(0.06,dayState.el==null?0.9:dayState.el); const sx=Math.round(TRAILER.lk.x/2)*2, sz=Math.round(TRAILER.lk.z/2)*2; sun.position.set(sx+40*(1-el)+15,12+el*70,sz+22); sun.target.position.set(sx,0,sz); sun.target.updateMatrixWorld(); updateLightPool(camera.position); return; }
   const target=tv.copy(viewPos(players[localSlot])); target.y+=0.9;
   const cp=Math.cos(cam.pitch);
   tv2.set(Math.sin(cam.yaw)*cp,Math.sin(cam.pitch),Math.cos(cam.yaw)*cp).multiplyScalar(cam.dist).add(target);
@@ -1703,6 +1732,7 @@ function encInp(i){ let f=0; if(i.w)f|=1; if(i.a)f|=2; if(i.s)f|=4; if(i.d)f|=8;
 function decInp(a){ const f=a[0]|0; return {w:!!(f&1),a:!!(f&2),s:!!(f&4),d:!!(f&8),shift:!!(f&16),space:!!(f&32),j:!!(f&64),f:!!(f&128),e:!!(f&256),r:!!(f&512),mx:clamp((a[1]|0)/100,-1,1),mz:clamp((a[2]|0)/100,-1,1)}; }
 const EMPTY_INP=decInp([0,0,0]);
 function captureInput(){
+  if(TRAILER.active) return TRAILER.input||EMPTY_INP;
   if(menuOpen){ oneShot={j:false,f:false,e:false,r:false}; return EMPTY_INP; }
   const fwd=new V3(-Math.sin(cam.yaw),0,-Math.cos(cam.yaw)); const right=new V3(-fwd.z,0,fwd.x);
   const w=!!(kb['w']||kb['arrowup']), a=!!(kb['a']||kb['arrowleft']), sK=!!(kb['s']||kb['arrowdown']), d=!!(kb['d']||kb['arrowright']);
@@ -1878,7 +1908,7 @@ const DAYKEYS=[
   [1.00,0xf2b27a,0.45,0xffb070,0.32,0.10,'Sunrise']];
 const dayState={tod:0,night:0,phase:'',cA:new THREE.Color(),cB:new THREE.Color()};
 function updateDayNight(){
-  const tod=((Date.now()/1000)%DAY_SECONDS)/DAY_SECONDS; dayState.tod=tod;
+  const tod=(TRAILER.active&&TRAILER.tod!=null)?TRAILER.tod:((Date.now()/1000)%DAY_SECONDS)/DAY_SECONDS; dayState.tod=tod;
   let k=0; while(k<DAYKEYS.length-2&&DAYKEYS[k+1][0]<=tod) k++;
   const A=DAYKEYS[k], B=DAYKEYS[k+1], f=(tod-A[0])/(B[0]-A[0]);
   const sky=dayState.cA.setHex(A[1]).lerp(dayState.cB.setHex(B[1]),f);
@@ -1906,7 +1936,7 @@ function updateClub(dt,t){
     if(P.beams){ P.beams.rotation.y=t*0.9; P.beams.children.forEach((c,i)=>{ c.rotation.z=0.45+Math.sin(t*0.7+i)*0.25; }); }
     if(P.ball) P.ball.rotation.y=t*1.5;
   }
-  Music.style=(loud&&loud.style)||'house';
+  if(TRAILER.active){ vol=0.6; Music.style='epic'; } else Music.style=(loud&&loud.style)||'house';
   if(ac) Music.tick(vol);
   if(whimsy.concertScreen){ const q=Math.floor(t/4)%whimsy.concertScreen.length; whimsy.concertScreen.forEach((m,i)=>m.visible=i===q); }
   if(whimsy.alienCore){ whimsy.alienCore.scale.setScalar(1+pulse*0.4); }
@@ -1941,6 +1971,100 @@ function updateWhimsyPlayer(dt){ // runs per squirrel inside the simulation
   if(W.golden&&!W.goldenTaken&&player.pos.distanceTo(W.golden.position)<1.6){ W.goldenTaken=true; W.golden.visible=false; trick('GOLDEN ACORN',500); centerMsg('GOLDEN ACORN','the legends were true'); }
 }
 
+
+// ---------------- the trailer: a scripted sixty-second flythrough of the live world ----------------
+const TRAILER={clock:()=>performance.now(),active:false,t:0,start:0,shot:-1,input:null,tod:null,fade:1,title:null,recorder:null,chunks:[],stream:null,savedScore:0,done:false};
+const sm=u=>u<=0?0:u>=1?1:u*u*(3-2*u);
+function V(x,y,z){ return new V3(x,y,z); }
+// each shot: time window, camera path, look path, fov, optional time of day, title card, and a staging action
+const SHOTS=[
+  {t0:0,t1:5.5,cam:[V(-150,70,-150),V(-70,46,-62)],look:[V(0,4,0),V(0,6,0)],fov:62,tod:0.04,card:{at:0.8,text:'IN A CITY OF 180 PEOPLE',sub:'and one very bad squirrel'}},
+  {t0:5.5,t1:9.5,fov:48,tod:0.2,follow:{back:4.5,up:1.6,side:1.4},input:{w:1,shift:1},card:{at:0.4,text:'…ONE SQUIRREL HAD ENOUGH'},stage:'park'},
+  {t0:9.5,t1:12.5,fov:40,tod:0.3,follow:{back:3.2,up:1.2,side:-1.6},input:{w:1,shift:1},stage:'car',fire:{at:1.0,f:1},card:{at:1.2,text:'CAR SMASH',sub:'+75'}},
+  {t0:12.5,t1:16.5,cam:[V(20,2.2,-9.5),V(20,2.6,-16)],look:[V(20,1.6,-22),V(20,2.4,-27)],fov:58,tod:0.85,card:{at:0.3,text:'THE RAVE'},stage:'club'},
+  {t0:16.5,t1:20.5,cam:[V(-40,2.5,-100),V(30,3.5,-104)],look:[V(0,1.5,-115),V(10,1.5,-115)],fov:55,tod:0.62,card:{at:0.3,text:'THE WAR'},stage:'war'},
+  {t0:20.5,t1:24.5,cam:[V(-12,1.6,98),V(6,5,108)],look:[V(0,4,123),V(0,5,123)],fov:60,tod:0.8,card:{at:0.3,text:'THE SHOW'},stage:'concert'},
+  {t0:24.5,t1:27.5,cam:[V(52,2,8),V(60,3,12)],look:[V(60,1,22),V(60,2,20)],fov:48,tod:0.35,card:{at:0.3,text:'THE DUNK'}},
+  {t0:27.5,t1:31.5,cam:[V(-60,3.5,47),V(-60,2,64)],look:[V(-60,3,70),V(-60,1.6,71)],fov:52,tod:0.3,card:{at:0.5,text:'THE WEDDING',sub:'ricky is very attractive'}},
+  {t0:31.5,t1:34.5,fov:44,tod:0.4,fixed:{x:0,y:1.3,z:0},stage:'punch',card:{at:0.9,text:'THE CONSEQUENCES'}},
+  {t0:34.5,t1:38.5,cam:[V(-14,2,-28),V(-30,16,-8)],look:[V(-20,10,-20),V(-20,18,-20)],fov:58,tod:0.9,stage:'ufo',card:{at:0.3,text:'THE MOTHERSHIP'}},
+  {t0:38.5,t1:43.5,cam:[V(100,3,40),V(90,22,-40)],look:[V(112,2,20),V(112,12,-80)],fov:60,tod:0.08,stage:'flight',card:{at:0.4,text:'THE FLIGHT'}},
+  {t0:43.5,t1:45.5,cam:[V(104,2.5,2),V(100,3,-2)],look:[V(103,8,-10),V(103,10,-8)],fov:50,tod:0.3,card:{at:0.2,text:'THE BURGER'}},
+  {t0:45.5,t1:47.5,cam:[V(-100,2,-36),V(-108,2.5,-44)],look:[V(-112,1.6,-52),V(-112,1.4,-52)],fov:48,tod:0.88,card:{at:0.2,text:'THE BUCKET',sub:'nothing good is in there'}},
+  {t0:47.5,t1:48.7,cam:[V(-6,1.3,-4),V(-7,1.6,-5)],look:[V(-10,0.8,-8),V(-10,0.8,-8)],fov:50,tod:0.3},
+  {t0:48.7,t1:49.9,cam:[V(-33,1.4,-6),V(-32,1.6,-7)],look:[V(-30,1.4,-10),V(-30,1.6,-10)],fov:46,tod:0.3},
+  {t0:49.9,t1:51.1,cam:[V(-116,2,20),V(-114,2.4,18)],look:[V(-110,0.6,30),V(-110,0.6,30)],fov:50,tod:0.55},
+  {t0:51.1,t1:52.3,cam:[V(60,1.8,-42),V(58,2.2,-44)],look:[V(60,1.4,-50),V(60,1.4,-50)],fov:46,tod:0.35},
+  {t0:52.3,t1:53.5,cam:[V(-66,1.6,-6),V(-63,1.8,-8)],look:[V(-62,1.4,-12),V(-62,1.4,-12)],fov:50,tod:0.85},
+  {t0:53.5,t1:60.5,cam:[V(-150,70,-150),V(-130,60,-130)],look:[V(0,4,0),V(0,4,0)],fov:60,tod:0.76,card:{at:0.6,text:'SQUIRREL GAME',sub:'2-player online · free · kyleleesea.github.io/squirrel-simulator',big:true}}
+];
+function trailerStage(name){
+  const P=players[localSlot];
+  const place=(x,z,yaw)=>{ if(P.driving) exitCar(); P.rag=null; P.climbing=null; P.held=null; P.pos.set(x,0,z); P.pPos.copy(P.pos); P.vel.set(0,0,0); P.yaw=yaw; TRAILER.yaw=yaw; };
+  if(name==='park'){ place(-22,-6,Math.PI*0.75); }
+  if(name==='car'){ const car=bodies.find(b=>b.kind==='car'&&!b.driver); place(car.pos.x,car.pos.z+6,Math.PI); car.wake(); }
+  if(name==='club'){ place(20,-11,Math.PI); }
+  if(name==='war'){ for(const c of WAR.cannons) c.t=6.5+(c.x>WAR.x?1.5:0); }
+  if(name==='concert'){ place(0,100,0); }
+  if(name==='punch'){ const s=whimsy.saitama; const v=npcs.find(n=>n.state==='walk'&&n.role!=='saitama'&&n.role!=='timmy'&&n.role!=='wah'&&n.role!=='hudson'); if(s&&v){ v.body.pos.set(s.body.pos.x+1.3,0.9,s.body.pos.z); v.target={x:s.body.pos.x,z:s.body.pos.z}; v.speed=0; s.punchT=4.6; TRAILER.fixedAt={x:s.body.pos.x,z:s.body.pos.z}; } place(-11,-30,0); }
+  if(name==='ufo'){ const u=whimsy.ufo.position; place(u.x,u.z,0); P.cd.abduct=0; }
+  if(name==='flight'){ place(112,20,0); P.pos.set(112-0.5,2.1,20-10); P.pPos.copy(P.pos); PLANE.flightTick=Math.max(1,simTick)-150; }
+}
+function startTrailer(record){
+  if(Net.mode!=='solo') leaveNet();
+  TRAILER.savedScore=players[localSlot].score; resetWorld(); players[localSlot].score=TRAILER.savedScore;
+  TRAILER.active=true; TRAILER.done=false; TRAILER.start=TRAILER.clock(); TRAILER.t=0; TRAILER.shot=-1; TRAILER.input=EMPTY_INP; TRAILER.fade=1; TRAILER.fixedAt=null;
+  showMenu(false); $('hud').hidden=true; $('cine').hidden=false; setCard(null);
+  ensureAudio(); if(ac&&ac.state==='suspended') ac.resume().catch(()=>{});
+  if(record) startRecording();
+}
+function endTrailer(){
+  if(!TRAILER.active) return; TRAILER.active=false; TRAILER.input=null; TRAILER.tod=null; $('cine').hidden=true; setCard(null);
+  camera.fov=60; camera.updateProjectionMatrix(); cam.pos.set(0,0,0); cam.yaw=Math.PI; cam.pitch=0.35;
+  const P=players[localSlot]; if(P.driving) exitCar(); P.rag=null; P.climbing=null; P.pos.set(-11,0,-17); P.pPos.copy(P.pos); P.vel.set(0,0,0);
+  if(TRAILER.recorder&&TRAILER.recorder.state!=='inactive'){ TRAILER.recorder.stop(); } else showMenu(true);
+}
+function setCard(card,alpha){ const el=$('cineCard'); if(!card){ el.hidden=true; el.style.opacity=0; return; } el.hidden=false; el.classList.toggle('big',!!card.big); $('cineText').textContent=card.text; $('cineSub').textContent=card.sub||''; el.style.opacity=alpha; }
+function updateTrailer(dt){
+  if(!TRAILER.active) return;
+  TRAILER.t=(TRAILER.clock()-TRAILER.start)/1000; const t=TRAILER.t;
+  if(t>=60.5){ endTrailer(); return; }
+  let si=SHOTS.findIndex(s=>t>=s.t0&&t<s.t1); if(si<0) si=SHOTS.length-1; const S=SHOTS[si];
+  if(si!==TRAILER.shot){ TRAILER.shot=si; TRAILER.input=S.input?Object.assign({},EMPTY_INP,S.input,{mx:0,mz:0}):EMPTY_INP; if(S.stage) trailerStage(S.stage); TRAILER.fired=false; }
+  const u=sm((t-S.t0)/(S.t1-S.t0)), local=t-S.t0;
+  TRAILER.tod=S.tod==null?null:S.tod;
+  // move the hero squirrel along its facing when a shot drives it
+  if(S.input&&TRAILER.input){ const y=TRAILER.yaw||0; TRAILER.input=Object.assign({},TRAILER.input,{mx:Math.round(Math.sin(y)*100)/100,mz:Math.round(Math.cos(y)*100)/100,f:false}); }
+  if(S.fire&&!TRAILER.fired&&local>=S.fire.at){ TRAILER.fired=true; TRAILER.input=Object.assign({},TRAILER.input,{f:true}); TRAILER.fireTick=simTick; }
+  else if(TRAILER.fired&&TRAILER.input&&TRAILER.input.f&&simTick>TRAILER.fireTick+1){ TRAILER.input=Object.assign({},TRAILER.input,{f:false}); }
+  // camera
+  const P=players[localSlot]; const pv=viewPos(P);
+  let cp, lk;
+  if(S.follow){ const y=TRAILER.yaw||0; const bx=-Math.sin(y)*S.follow.back+Math.cos(y)*S.follow.side, bz=-Math.cos(y)*S.follow.back-Math.sin(y)*S.follow.side; cp=V(pv.x+bx,pv.y+S.follow.up,pv.z+bz); lk=V(pv.x,pv.y+0.7,pv.z); }
+  else if(S.fixed){ const a=TRAILER.fixedAt||{x:pv.x,z:pv.z}; const ang=local*0.5; cp=V(a.x+Math.cos(ang)*4.5,1.6,a.z+Math.sin(ang)*4.5); lk=V(a.x,1.0,a.z); }
+  else { cp=V(0,0,0).lerpVectors(S.cam[0],S.cam[1],u); lk=V(0,0,0).lerpVectors(S.look[0],S.look[1],u); }
+  TRAILER.cp=cp; TRAILER.lk=lk; TRAILER.fov=S.fov||55;
+  // cuts dip to black for a few frames; the opener and the title card fade slowly
+  const inD=si===0?2.0:0.18, outD=si===SHOTS.length-1?1.6:0.18; const tin=Math.min(1,local/inD), tout=Math.min(1,(S.t1-t)/outD); TRAILER.fade=1-Math.min(tin,tout);
+  if(si===SHOTS.length-1&&local>5.6) TRAILER.fade=Math.min(1,(local-5.6)/1.2);
+  if(S.card){ const a=local-S.card.at; const alpha=a<0?0:Math.min(1,a/0.5)*(S.t1-t<0.5?Math.max(0,(S.t1-t)/0.5):1); setCard(alpha>0?S.card:null,alpha); } else setCard(null);
+  $('cineFade').style.opacity=TRAILER.fade;
+  if(si===SHOTS.length-1&&!TRAILER.hit&&local>0.6){ TRAILER.hit=true; beep(48,2.5,'sine',0.18); }
+}
+// recording: canvas frames plus the synth score, saved as a .webm
+let recDest=null, masterOut=null;
+function audioOut(){ if(!ac) return null; if(!masterOut){ masterOut=ac.createGain(); masterOut.gain.value=1; masterOut.connect(ac.destination); } return masterOut; }
+function startRecording(){
+  try{
+    const vs=canvas.captureStream(0); const stream=new MediaStream(vs.getVideoTracks());
+    if(ac){ recDest=ac.createMediaStreamDestination(); audioOut().connect(recDest); if(Music.gain){ try{ Music.gain.disconnect(); }catch(e){} Music.gain.connect(audioOut()); } stream.addTrack(recDest.stream.getAudioTracks()[0]); }
+    const mime=['video/webm;codecs=vp9,opus','video/webm;codecs=vp8,opus','video/webm'].find(m=>window.MediaRecorder&&MediaRecorder.isTypeSupported(m))||'';
+    const rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:9e6}:undefined); TRAILER.chunks=[]; rec.ondataavailable=e=>{ if(e.data&&e.data.size) TRAILER.chunks.push(e.data); };
+    rec.onstop=()=>{ const blob=new Blob(TRAILER.chunks,{type:'video/webm'}); TRAILER.blob=blob; const url=URL.createObjectURL(blob); const a=$('trailerDl'); a.href=url; a.download='squirrel-game-trailer.webm'; a.hidden=false; a.textContent='Download the trailer ('+(blob.size/1048576).toFixed(1)+' MB)'; showMenu(true); if(TRAILER.onBlob) TRAILER.onBlob(blob); };
+    rec.start(500); TRAILER.recorder=rec; TRAILER.stream=stream;
+  }catch(e){ TRAILER.recorder=null; console.warn('recording unavailable',e); }
+}
+
 // ---------------- HUD ----------------
 let hudT=0;
 function updateHUD(){
@@ -1959,6 +2083,7 @@ window.addEventListener('keydown',e=>{
   ensureAudio();
   const k=e.key.toLowerCase();
   if(e.target&&e.target.tagName==='INPUT') return;
+  if(TRAILER.active){ if(k==='escape') endTrailer(); return; }
   if(k==='escape'){ if(!document.pointerLockElement){ showMenu(!menuOpen); } return; }
   if(menuOpen) return;
   kb[k]=true;
@@ -1974,6 +2099,7 @@ window.addEventListener('blur',()=>{ for(const k in kb) kb[k]=false; });
 let dragging=false, lastMX=0, lastMY=0;
 canvas.addEventListener('mousedown',e=>{
   ensureAudio();
+  if(TRAILER.active){ endTrailer(); return; }
   if(menuOpen) return;
   if(e.button===0){
     if(!document.pointerLockElement){ try{ const p=canvas.requestPointerLock(); if(p&&p.catch) p.catch(()=>{}); }catch(err){} dragging=true; lastMX=e.clientX; lastMY=e.clientY; }
@@ -1993,6 +2119,8 @@ window.addEventListener('mousemove',e=>{
 canvas.addEventListener('wheel',e=>{ e.preventDefault(); cam.dist=clamp(cam.dist+Math.sign(e.deltaY)*0.6,3,13); },{passive:false});
 document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement===canvas) dragging=false; });
 $('menuBtn').addEventListener('click',()=>showMenu(true));
+$('trailerBtn').addEventListener('click',()=>{ readName(); startTrailer(false); });
+$('recordBtn').addEventListener('click',()=>{ readName(); startTrailer(true); });
 
 // menu wiring
 const sw=$('swatches');
@@ -2013,7 +2141,7 @@ $('nameIn').addEventListener('change',()=>{ readName(); if(Net.room) Net.room.pr
 // ---------------- main loop: fixed 60 Hz simulation, rendering in between ----------------
 let last=performance.now(), t0=last, acc=0, renderAlpha=1;
 const rpos=new V3(); function viewPos(P){ return rpos.lerpVectors(P.pPos,P.pos,renderAlpha); }
-function resize(){ const w=canvas.clientWidth, h=canvas.clientHeight; if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
+function resize(){ let w=canvas.clientWidth, h=canvas.clientHeight; if(window.__sq&&window.__sq.forceSize){ w=window.__sq.forceSize[0]/renderer.getPixelRatio(); h=window.__sq.forceSize[1]/renderer.getPixelRatio(); } if(canvas.width!==Math.floor(w*renderer.getPixelRatio())||canvas.height!==Math.floor(h*renderer.getPixelRatio())){ renderer.setSize(w,h,false); camera.aspect=w/h; camera.updateProjectionMatrix(); } }
 function canStep(){ if(Net.mode!=='online'||!Lock.started) return true; return Lock.remoteInputs.has(simTick); }
 function advance(realDt){
   acc+=realDt; let steps=0;
@@ -2041,12 +2169,14 @@ function frame(now){
   for(const P of players) renderSquirrel(P,dt,t);
   PLANE.group.position.set((PLANE.pX==null?PLANE.x:PLANE.pX)+((PLANE.x-(PLANE.pX==null?PLANE.x:PLANE.pX))*alpha),(PLANE.pY==null?PLANE.y:PLANE.pY)+((PLANE.y-(PLANE.pY==null?PLANE.y:PLANE.pY))*alpha),(PLANE.pZ==null?PLANE.z:PLANE.pZ)+((PLANE.z-(PLANE.pZ==null?PLANE.z:PLANE.pZ))*alpha));
   for(const sm of WAR.smoke){ sm.g.children.forEach((s2,k)=>{ s2.position.y=((k*1.3+t*1.2+sm.ph)%7); s2.position.x=Math.sin(t*0.5+k+sm.ph)*0.6; s2.material.opacity=0.45*(1-s2.position.y/7); }); }
+  updateTrailer(dt);
   updateCamera(dt);
   { const LP1=players[localSlot]; const on=LP1.sprint&&Math.hypot(LP1.vel.x,LP1.vel.z)>4&&!LP1.driving&&!LP1.rag; const chip=$('sprintChip'); if(chip.hidden===on) chip.hidden=!on; }
   hudT+=dt; if(hudT>0.2){ hudT=0; if(!menuOpen) updateHUD(); }
   if(!window.__sq||!window.__sq.skipRender) renderer.render(scene,camera);
+  if(TRAILER.stream){ const tr0=TRAILER.stream.getVideoTracks()[0]; if(tr0&&tr0.requestFrame) tr0.requestFrame(); }
 }
-window.__sq={get player(){return players[localSlot];},players,get localSlot(){return localSlot;},bodies,npcs,trees,Net,cam,whimsy,CLUB,statics,frame,advance,simStep,resetWorld,worldHash,Lock,get simTick(){return simTick;},captureInput,oneShot:()=>oneShot,kb,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,WAR,CONCERT,setLocalInput:(t,i)=>Lock.localInputs.set(t,i),act:(fn)=>{ player=players[localSlot]; return fn(); },headbutt,tailGrab,enterRagdoll,enterCar,exitCar,tryFly};
+window.__sq={setAC:(x)=>{ ac=x; },getAC:()=>ac,startTrailer,endTrailer,TRAILER,get player(){return players[localSlot];},players,get localSlot(){return localSlot;},bodies,npcs,trees,Net,cam,whimsy,CLUB,statics,frame,advance,simStep,resetWorld,worldHash,Lock,get simTick(){return simTick;},captureInput,oneShot:()=>oneShot,kb,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,WAR,CONCERT,setLocalInput:(t,i)=>Lock.localInputs.set(t,i),act:(fn)=>{ player=players[localSlot]; return fn(); },headbutt,tailGrab,enterRagdoll,enterCar,exitCar,tryFly};
 requestAnimationFrame(frame);
 detectNet();
 })();
