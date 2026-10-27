@@ -193,7 +193,7 @@ const approach=(v,t,d)=>v<t?Math.min(v+d,t):Math.max(v-d,t);
 
 // ---------------- renderer / scene ----------------
 const canvas=$('c');
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,preserveDrawingBuffer:/[?&]capture=1/.test(location.search)}); // the capture flag keeps frames readable for offline rendering
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
 renderer.shadowMap.enabled=true; renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputEncoding=THREE.sRGBEncoding;
@@ -2120,6 +2120,7 @@ canvas.addEventListener('wheel',e=>{ e.preventDefault(); cam.dist=clamp(cam.dist
 document.addEventListener('pointerlockchange',()=>{ if(document.pointerLockElement===canvas) dragging=false; });
 $('menuBtn').addEventListener('click',()=>showMenu(true));
 $('trailerBtn').addEventListener('click',()=>{ readName(); startTrailer(false); });
+if(window.claude||!window.MediaRecorder) $('recordBtn').hidden=true; // recording only where a download can be saved
 $('recordBtn').addEventListener('click',()=>{ readName(); startTrailer(true); });
 
 // menu wiring
@@ -2176,7 +2177,7 @@ function frame(now){
   if(!window.__sq||!window.__sq.skipRender) renderer.render(scene,camera);
   if(TRAILER.stream){ const tr0=TRAILER.stream.getVideoTracks()[0]; if(tr0&&tr0.requestFrame) tr0.requestFrame(); }
 }
-window.__sq={setAC:(x)=>{ ac=x; },getAC:()=>ac,startTrailer,endTrailer,TRAILER,get player(){return players[localSlot];},players,get localSlot(){return localSlot;},bodies,npcs,trees,Net,cam,whimsy,CLUB,statics,frame,advance,simStep,resetWorld,worldHash,Lock,get simTick(){return simTick;},captureInput,oneShot:()=>oneShot,kb,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,WAR,CONCERT,setLocalInput:(t,i)=>Lock.localInputs.set(t,i),act:(fn)=>{ player=players[localSlot]; return fn(); },headbutt,tailGrab,enterRagdoll,enterCar,exitCar,tryFly};
+window.__sq={renderOnly:()=>renderer.render(scene,camera),contextLost:()=>{ const gl=renderer.getContext(); return gl.isContextLost(); },setAC:(x)=>{ ac=x; },getAC:()=>ac,startTrailer,endTrailer,TRAILER,get player(){return players[localSlot];},players,get localSlot(){return localSlot;},bodies,npcs,trees,Net,cam,whimsy,CLUB,statics,frame,advance,simStep,resetWorld,worldHash,Lock,get simTick(){return simTick;},captureInput,oneShot:()=>oneShot,kb,Music:()=>Music,ac:()=>ac,PLANE,ALIEN,PARTIES,ZONES,WAR,CONCERT,setLocalInput:(t,i)=>Lock.localInputs.set(t,i),act:(fn)=>{ player=players[localSlot]; return fn(); },headbutt,tailGrab,enterRagdoll,enterCar,exitCar,tryFly};
 requestAnimationFrame(frame);
 detectNet();
 })();
